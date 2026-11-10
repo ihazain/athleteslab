@@ -21,6 +21,9 @@ from unittest import mock
 # Django
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.db import connection
+from django.forms.models import model_to_dict
+from django.test.utils import CaptureQueriesContext
 
 # wger
 from wger.core.models import RepetitionUnit, WeightUnit
@@ -28,6 +31,11 @@ from wger.core.tests.base_testcase import WgerTestCase
 from wger.manager.models import (
     Day,
     Label,
+    MaxRepetitionsConfig,
+    MaxRestConfig,
+    MaxRiRConfig,
+    MaxSetsConfig,
+    MaxWeightConfig,
     RepetitionsConfig,
     RestConfig,
     RiRConfig,
@@ -701,3 +709,155 @@ class AssignProgramTestCase(WgerTestCase):
         self.assign(group=self.make_group(self.athlete1))
         with self.assertRaises(ValidationError):
             self.assign(team=self.team)
+
+
+class CopyRoutineTestCase(WgerTestCase):
+    """
+    Tests for the copy_routine service function.
+    """
+
+    CONFIG_MODELS = (
+        WeightConfig,
+        MaxWeightConfig,
+        RepetitionsConfig,
+        MaxRepetitionsConfig,
+        SetsConfig,
+        MaxSetsConfig,
+        RestConfig,
+        MaxRestConfig,
+        RiRConfig,
+        MaxRiRConfig,
+    )
+
+    def setUp(self):
+        super().setUp()
+        self.coach = User.objects.create_user(username='coach', email='coach@example.com')
+        self.athlete = User.objects.create_user(username='athlete', email='athlete@example.com')
+        self.template = Routine.objects.create(
+            user=self.coach,
+            name='Template',
+            description='Description',
+            is_template=True,
+            is_public=True,
+            start=datetime.date(2026, 11, 1),
+            end=datetime.date(2026, 11, 30),
+        )
+        self.start = datetime.date(2026, 12, 1)
+        self.end = datetime.date(2026, 12, 31)
+
+    def add_day(self, order: int, entries: int) -> Day:
+        """
+        A day with one slot per entry, each entry with two iterations of every config type.
+        """
+        day = Day.objects.create(routine=self.template, order=order, name=f'Day {order}')
+        for slot_order in range(1, entries + 1):
+            slot = Slot.objects.create(day=day, order=slot_order, comment=f'Slot {slot_order}')
+            entry = SlotEntry.objects.create(
+                slot=slot,
+                exercise_id=1,
+                repetition_unit=RepetitionUnit.objects.first(),
+                weight_unit=WeightUnit.objects.first(),
+                order=1,
+                comment=f'Entry {order}/{slot_order}',
+            )
+            for number, model in enumerate(self.CONFIG_MODELS):
+                model.objects.create(slot_entry=entry, iteration=1, value=number % 3 + 1)
+                model.objects.create(slot_entry=entry, iteration=3, value=1, operation='+')
+        return day
+
+    @staticmethod
+    def tree(routine: Routine) -> list:
+        """
+        The content of a routine without ids and parent references, in order.
+        """
+
+        def content(instance, *parents):
+            return model_to_dict(instance, exclude=['id', *parents])
+
+        result = [content(routine, 'user', 'start', 'end', 'is_template', 'is_public')]
+        result.append([content(label, 'routine') for label in routine.labels.order_by('pk')])
+        for day in routine.days.order_by('pk'):
+            result.append(content(day, 'routine'))
+            for slot in day.slots.order_by('pk'):
+                result.append(content(slot, 'day'))
+                for entry in slot.entries.order_by('pk'):
+                    result.append(content(entry, 'slot'))
+                    for model in CopyRoutineTestCase.CONFIG_MODELS:
+                        configs = model.objects.filter(slot_entry=entry).order_by('pk')
+                        result.append(
+                            [model.__name__] + [content(c, 'slot_entry') for c in configs]
+                        )
+        return result
+
+    def test_copy_has_the_same_content(self):
+        """
+        The copy has the content of the template in the same order, for all ten config
+        types, and is a private routine of the new owner with the new period.
+        """
+        self.add_day(1, entries=3)
+        self.add_day(2, entries=2)
+        Label.objects.create(routine=self.template, start_offset=1, end_offset=7, label='Week 1')
+        routine_copy = copy_routine(self.template, self.athlete, self.start, self.end)
+
+        self.assertEqual(self.tree(routine_copy), self.tree(self.template))
+        self.assertEqual(len(self.tree(self.template)), 2 + 2 + 5 * 12)
+        self.assertEqual(routine_copy.user, self.athlete)
+        self.assertEqual((routine_copy.start, routine_copy.end), (self.start, self.end))
+        self.assertFalse(routine_copy.is_template)
+        self.assertFalse(routine_copy.is_public)
+
+        # Nothing was moved away from the template, every row exists twice
+        for routine in (self.template, routine_copy):
+            self.assertEqual(routine.days.count(), 2)
+            self.assertEqual(SlotEntry.objects.filter(slot__day__routine=routine).count(), 5)
+            for model in self.CONFIG_MODELS:
+                configs = model.objects.filter(slot_entry__slot__day__routine=routine)
+                self.assertEqual(configs.count(), 10, model.__name__)
+
+    def test_copy_query_count_does_not_grow_with_the_template(self):
+        """
+        Copying a bigger template needs the same number of queries as a small one.
+        """
+        self.add_day(1, entries=1)
+        with CaptureQueriesContext(connection) as small:
+            copy_routine(self.template, self.athlete, self.start, self.end)
+
+        self.add_day(2, entries=4)
+        self.add_day(3, entries=4)
+        with CaptureQueriesContext(connection) as big:
+            copy_routine(self.template, self.athlete, self.start, self.end)
+
+        self.assertEqual(len(big), len(small))
+
+    def test_copy_of_empty_template(self):
+        """
+        A template without days can be copied.
+        """
+        routine_copy = copy_routine(self.template, self.athlete, self.start, self.end)
+        self.assertEqual(routine_copy.days.count(), 0)
+        self.assertEqual(routine_copy.name, self.template.name)
+
+    def test_copy_falls_back_to_rounding_of_the_owner(self):
+        """
+        Entries without rounding get the rounding of the new owner, others keep theirs.
+        """
+        day = self.add_day(1, entries=2)
+        without, with_rounding = SlotEntry.objects.filter(slot__day=day).order_by('pk')
+        SlotEntry.objects.filter(pk=without.pk).update(
+            repetition_rounding=None, weight_rounding=None
+        )
+        SlotEntry.objects.filter(pk=with_rounding.pk).update(
+            repetition_rounding=2, weight_rounding=5
+        )
+        profile = self.athlete.userprofile
+        profile.repetitions_rounding = 1
+        profile.weight_rounding = 2.5
+        profile.save()
+
+        routine_copy = copy_routine(self.template, self.athlete, self.start, self.end)
+
+        entries = SlotEntry.objects.filter(slot__day__routine=routine_copy).order_by('pk')
+        self.assertEqual(
+            [(entry.repetition_rounding, entry.weight_rounding) for entry in entries],
+            [(1, 2.5), (2, 5)],
+        )

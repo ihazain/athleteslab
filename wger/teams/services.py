@@ -25,7 +25,21 @@ from django.db.models import Count, Max
 from django.utils import timezone
 
 # wger
-from wger.manager.models import WorkoutLog
+from wger.manager.models import (
+    MaxRepetitionsConfig,
+    MaxRestConfig,
+    MaxRiRConfig,
+    MaxSetsConfig,
+    MaxWeightConfig,
+    RepetitionsConfig,
+    RestConfig,
+    RiRConfig,
+    SetsConfig,
+    Slot,
+    SlotEntry,
+    WeightConfig,
+    WorkoutLog,
+)
 from wger.teams.models import (
     AssignedRoutine,
     ProgramAssignment,
@@ -36,6 +50,41 @@ from wger.teams.models import (
 logger = logging.getLogger(__name__)
 
 
+CONFIG_MODELS = (
+    WeightConfig,
+    MaxWeightConfig,
+    RepetitionsConfig,
+    MaxRepetitionsConfig,
+    RiRConfig,
+    MaxRiRConfig,
+    RestConfig,
+    MaxRestConfig,
+    SetsConfig,
+    MaxSetsConfig,
+)
+
+
+def _copy_rows(rows, parent_field: str, parent_copies: dict) -> dict:
+    """
+    Copies the rows below the copies of their parents with a single insert.
+
+    Returns the copies by the pk of their original. bulk_create sends no
+    signals: saving row by row resets the routine cache for every row, which
+    walks the whole routine each time.
+    """
+    originals = list(rows)
+    copies = []
+    for row in originals:
+        row_copy = copy.copy(row)
+        row_copy.pk = None
+        setattr(row_copy, parent_field, parent_copies[getattr(row, f'{parent_field}_id')])
+        copies.append(row_copy)
+
+    if copies:
+        type(copies[0]).objects.bulk_create(copies)
+    return {row.pk: row_copy for row, row_copy in zip(originals, copies)}
+
+
 def copy_routine(template, owner, start, end):
     """
     Deep-copy a routine template for a given athlete.
@@ -44,14 +93,6 @@ def copy_routine(template, owner, start, end):
     repetitions, RiR, rest, sets, and their max variants). The copy is
     always a private, non-template routine owned by ``owner``.
     """
-
-    def copy_config(configs, slot_entry):
-        for config in configs:
-            config_copy = copy.copy(config)
-            config_copy.pk = None
-            config_copy.slot_entry = slot_entry
-            config_copy.save()
-
     routine_copy = copy.copy(template)
     routine_copy.pk = None
     routine_copy.created = None
@@ -61,44 +102,28 @@ def copy_routine(template, owner, start, end):
     routine_copy.start = start
     routine_copy.end = end
     routine_copy.save()
+    routines = {template.pk: routine_copy}
 
-    for day in template.days.all():
-        day_copy = copy.copy(day)
-        day_copy.pk = None
-        day_copy.routine = routine_copy
-        day_copy.save()
+    _copy_rows(template.labels.order_by('pk'), 'routine', routines)
+    days = _copy_rows(template.days.order_by('pk'), 'routine', routines)
+    slots = _copy_rows(Slot.objects.filter(day__routine=template).order_by('pk'), 'day', days)
 
-        for current_slot in day.slots.all():
-            slot_copy = copy.copy(current_slot)
-            slot_copy.pk = None
-            slot_copy.day = day_copy
-            slot_copy.save()
+    # Like SlotEntry.save() does for new entries, fall back to the rounding of the owner
+    profile = owner.userprofile
+    entries = SlotEntry.objects.filter(slot__day__routine=template).order_by('pk')
+    entry_copies = _copy_rows(entries, 'slot', slots)
+    SlotEntry.objects.filter(
+        pk__in=[entry.pk for entry in entry_copies.values()],
+        repetition_rounding__isnull=True,
+    ).update(repetition_rounding=profile.repetitions_rounding)
+    SlotEntry.objects.filter(
+        pk__in=[entry.pk for entry in entry_copies.values()],
+        weight_rounding__isnull=True,
+    ).update(weight_rounding=profile.weight_rounding)
 
-            for current_entry in current_slot.entries.all():
-                slot_entry_copy = copy.copy(current_entry)
-                slot_entry_copy.pk = None
-                slot_entry_copy.slot = slot_copy
-                slot_entry_copy.save()
-
-                copy_config(current_entry.weightconfig_set.all(), slot_entry_copy)
-                copy_config(current_entry.maxweightconfig_set.all(), slot_entry_copy)
-                copy_config(current_entry.repetitionsconfig_set.all(), slot_entry_copy)
-                copy_config(
-                    current_entry.maxrepetitionsconfig_set.all(),
-                    slot_entry_copy,
-                )
-                copy_config(current_entry.rirconfig_set.all(), slot_entry_copy)
-                copy_config(current_entry.maxrirconfig_set.all(), slot_entry_copy)
-                copy_config(current_entry.restconfig_set.all(), slot_entry_copy)
-                copy_config(current_entry.maxrestconfig_set.all(), slot_entry_copy)
-                copy_config(current_entry.setsconfig_set.all(), slot_entry_copy)
-                copy_config(current_entry.maxsetsconfig_set.all(), slot_entry_copy)
-
-    for label in template.labels.all():
-        label_copy = copy.copy(label)
-        label_copy.pk = None
-        label_copy.routine = routine_copy
-        label_copy.save()
+    for model in CONFIG_MODELS:
+        configs = model.objects.filter(slot_entry__slot__day__routine=template).order_by('pk')
+        _copy_rows(configs, 'slot_entry', entry_copies)
 
     return routine_copy
 
