@@ -295,6 +295,7 @@ urlpatterns = i18n_patterns(
     path('gym/', include(('wger.gym.urls', 'gym'), namespace='gym')),
     path('gallery/', include(('wger.gallery.urls', 'gallery'), namespace='gallery')),
     path('trophies/', include(('wger.trophies.urls', 'trophies'), namespace='trophies')),
+    path('teams/', include(('wger.teams.urls', 'teams'), namespace='teams')),
     path(
         'measurement/',
         include(('wger.measurements.urls', 'measurements'), namespace='measurements'),

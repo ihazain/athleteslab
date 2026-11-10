@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Teams" %}{% endblock %}
+
+
+{% block content %}
+
+    {% if invitations %}
+        <h4>{% translate "Invitations" %}</h4>
+        <ul class="list-group mb-4">
+            {% for invitation in invitations %}
+                <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span>
+                        {% blocktranslate with team=invitation.team.name trimmed %}
+                            You are invited to join <strong>{{ team }}</strong>.
+                        {% endblocktranslate %}
+                    </span>
+                    <span class="d-flex gap-2">
+                        <form method="post" action="{% url 'teams:invitation-accept' invitation.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success btn-sm">
+                                {% translate "Accept" %}
+                            </button>
+                        </form>
+                        <form method="post" action="{% url 'teams:invitation-decline' invitation.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-secondary btn-sm">
+                                {% translate "Decline" %}
+                            </button>
+                        </form>
+                    </span>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+
+    <h4>{% translate "Your programs" %}</h4>
+    <ul class="list-group mb-4">
+        {% for program in programs %}
+            <li class="list-group-item">
+                <div class="d-flex flex-wrap justify-content-between gap-2">
+                    {% if program.routine %}
+                        <a href="{{ program.routine.get_absolute_url }}" class="fw-bold">
+                            {{ program.routine.name }}
+                        </a>
+                    {% else %}
+                        <span class="fw-bold text-muted">
+                            {{ program.assignment.template.name|default:"-/-" }}
+                        </span>
+                    {% endif %}
+                    <span class="text-muted">
+                        {{ program.assignment.start_date|date:"SHORT_DATE_FORMAT" }}
+                        &ndash;
+                        {{ program.assignment.end_date|date:"SHORT_DATE_FORMAT" }}
+                    </span>
+                </div>
+                <div class="small text-muted">
+                    {% if program.assignment.group %}
+                        {{ program.assignment.team.name }}, {{ program.assignment.group.name }}
+                    {% elif program.assignment.team %}
+                        {{ program.assignment.team.name }}
+                    {% else %}
+                        {% translate "Assigned to you personally" %}
+                    {% endif %}
+                    {% if program.assignment.assigned_by %}
+                        &middot; {{ program.assignment.assigned_by.username }}
+                    {% endif %}
+                </div>
+                {% if not program.routine %}
+                    <span class="badge text-bg-secondary">{% translate "You deleted this routine" %}</span>
+                {% endif %}
+                {% if program.assignment.archived_at %}
+                    <span class="badge text-bg-warning">{% translate "Withdrawn by the coach" %}</span>
+                {% endif %}
+            </li>
+        {% empty %}
+            <li class="list-group-item">
+                {% translate "No programs were assigned to you yet." %}
+            </li>
+        {% endfor %}
+    </ul>
+
+
+    <h4>{% translate "Your teams" %}</h4>
+    <ul class="list-group">
+        {% for membership in memberships %}
+            <li class="list-group-item d-flex justify-content-between">
+                <span>{{ membership.team.name }}</span>
+                <span class="text-muted">
+                    {% if membership.role == 'coach' %}
+                        {% translate "Coach" %}
+                    {% else %}
+                        {% translate "Athlete" %}
+                    {% endif %}
+                </span>
+            </li>
+        {% empty %}
+            <li class="list-group-item">
+                {% translate "You are not a member of a team yet." %}
+            </li>
+        {% endfor %}
+    </ul>
+{% endblock %}

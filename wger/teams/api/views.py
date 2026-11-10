@@ -18,7 +18,10 @@
 import logging
 
 # Django
-from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.exceptions import (
+    PermissionDenied as DjangoPermissionDenied,
+    ValidationError as DjangoValidationError,
+)
 from django.db import models, transaction
 
 # Third Party
@@ -52,8 +55,10 @@ from wger.teams.models import (
     TeamMembership,
 )
 from wger.teams.services import (
+    accept_invitation,
     archive_assignment,
     assignment_progress,
+    decline_invitation,
 )
 
 
@@ -160,16 +165,16 @@ class TeamMembershipViewSet(viewsets.ModelViewSet):
             .exists()
         )
 
-    def _get_own_invitation(self) -> TeamMembership:
+    def _answer_invitation(self, answer):
         """
-        Returns the open invitation of the requesting user, coaches cannot answer for others.
+        Lets the requesting user answer the invitation, coaches cannot answer for others.
         """
-        membership = self.get_object()
-        if membership.user_id != self.request.user.pk:
-            raise exceptions.PermissionDenied('Only the invited user can answer an invitation.')
-        if membership.status != TeamMembership.Status.INVITED:
-            raise exceptions.ValidationError('This membership is not an open invitation.')
-        return membership
+        try:
+            return answer(self.get_object(), self.request.user)
+        except DjangoPermissionDenied as exc:
+            raise exceptions.PermissionDenied(str(exc))
+        except DjangoValidationError as exc:
+            raise exceptions.ValidationError(detail=exc.messages)
 
     @extend_schema(request=None, responses=TeamMembershipSerializer)
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
@@ -177,9 +182,7 @@ class TeamMembershipViewSet(viewsets.ModelViewSet):
         """
         Accept the invitation, the membership becomes active.
         """
-        membership = self._get_own_invitation()
-        membership.status = TeamMembership.Status.ACTIVE
-        membership.save(update_fields=['status'])
+        membership = self._answer_invitation(accept_invitation)
         return Response(self.get_serializer(membership).data)
 
     @extend_schema(request=None, responses={204: None})
@@ -188,7 +191,7 @@ class TeamMembershipViewSet(viewsets.ModelViewSet):
         """
         Decline the invitation, the membership is removed.
         """
-        self._get_own_invitation().delete()
+        self._answer_invitation(decline_invitation)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

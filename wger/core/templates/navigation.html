@@ -75,6 +75,15 @@
                                 </a>
                             </li>
 
+                            {% if user.is_authenticated %}
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'teams:overview' %}"
+                                       rel="nofollow">
+                                        {% translate "Teams" %}
+                                    </a>
+                                </li>
+                            {% endif %}
+
                             <li class="dropdown-divider"></li>
                             <li class="dropdown-header">{% translate "Workout templates" %}</li>
                             <li>

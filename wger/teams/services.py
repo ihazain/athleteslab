@@ -289,3 +289,28 @@ def assignment_progress(assignment: ProgramAssignment) -> list[dict]:
             }
         )
     return progress
+
+
+def _own_open_invitation(membership: TeamMembership, user) -> None:
+    if membership.user_id != user.pk:
+        raise PermissionDenied('Only the invited user can answer an invitation.')
+    if membership.status != TeamMembership.Status.INVITED:
+        raise ValidationError('This membership is not an open invitation.')
+
+
+def accept_invitation(membership: TeamMembership, user) -> TeamMembership:
+    """
+    The invited user accepts, the membership becomes active.
+    """
+    _own_open_invitation(membership, user)
+    membership.status = TeamMembership.Status.ACTIVE
+    membership.save(update_fields=['status'])
+    return membership
+
+
+def decline_invitation(membership: TeamMembership, user) -> None:
+    """
+    The invited user declines, the membership is removed.
+    """
+    _own_open_invitation(membership, user)
+    membership.delete()
