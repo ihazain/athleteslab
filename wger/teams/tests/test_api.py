@@ -150,7 +150,12 @@ class TeamApiTestCase(WgerTestCase):
         A foreign coach gets 404 for a team they do not coach.
         """
         team = Team.objects.create(name='Secret Team', created_by=self.coach)
-        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
+        TeamMembership.objects.create(
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
 
         self.authenticate(self.other_coach)
         response = self.client.get(reverse('team-detail', kwargs={'pk': team.pk}))
@@ -161,7 +166,12 @@ class TeamApiTestCase(WgerTestCase):
         A coach can retrieve their own team.
         """
         team = Team.objects.create(name='My Team', created_by=self.coach)
-        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
+        TeamMembership.objects.create(
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
 
         self.authenticate(self.coach)
         response = self.client.get(reverse('team-detail', kwargs={'pk': team.pk}))
@@ -175,7 +185,12 @@ class TeamApiTestCase(WgerTestCase):
         A coach can add an athlete to their team.
         """
         team = Team.objects.create(name='Test Team', created_by=self.coach)
-        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
+        TeamMembership.objects.create(
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
 
         self.authenticate(self.coach)
         response = self.client.post(
@@ -199,7 +214,12 @@ class TeamApiTestCase(WgerTestCase):
         An athlete cannot add a membership to a team they do not coach.
         """
         team = Team.objects.create(name='Test Team', created_by=self.coach)
-        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
+        TeamMembership.objects.create(
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
 
         self.authenticate(self.athlete1)
         response = self.client.post(
@@ -218,7 +238,12 @@ class TeamApiTestCase(WgerTestCase):
         A foreign coach cannot add a membership to another team.
         """
         team = Team.objects.create(name='Test Team', created_by=self.coach)
-        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
+        TeamMembership.objects.create(
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
 
         self.authenticate(self.other_coach)
         response = self.client.post(
@@ -238,7 +263,10 @@ class TeamApiTestCase(WgerTestCase):
         """
         team = Team.objects.create(name='Test Team', created_by=self.coach)
         membership = TeamMembership.objects.create(
-            team=team, user=self.coach, role=TeamMembership.Role.COACH
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
         )
 
         self.authenticate(self.coach)
@@ -254,12 +282,23 @@ class TeamApiTestCase(WgerTestCase):
         A coach can assign a template to a team, creating one copy per athlete.
         """
         team = Team.objects.create(name='Test Team', created_by=self.coach)
-        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
         TeamMembership.objects.create(
-            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
         )
         TeamMembership.objects.create(
-            team=team, user=self.athlete2, role=TeamMembership.Role.ATHLETE
+            team=team,
+            user=self.athlete1,
+            role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
+        )
+        TeamMembership.objects.create(
+            team=team,
+            user=self.athlete2,
+            role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
         )
 
         self.authenticate(self.coach)
@@ -289,9 +328,17 @@ class TeamApiTestCase(WgerTestCase):
         Assigning the same template to the same athlete for an overlapping period returns 400.
         """
         team = Team.objects.create(name='Test Team', created_by=self.coach)
-        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
         TeamMembership.objects.create(
-            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
+        TeamMembership.objects.create(
+            team=team,
+            user=self.athlete1,
+            role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
         )
 
         self.authenticate(self.coach)
@@ -319,9 +366,17 @@ class TeamApiTestCase(WgerTestCase):
         """
         self.assertFalse(self.template.is_public)
         team = Team.objects.create(name='Test Team', created_by=self.coach)
-        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
         TeamMembership.objects.create(
-            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
+        TeamMembership.objects.create(
+            team=team,
+            user=self.athlete1,
+            role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
         )
 
         self.authenticate(self.coach)
@@ -356,7 +411,12 @@ class TeamApiTestCase(WgerTestCase):
         An athlete cannot assign a program.
         """
         team = Team.objects.create(name='Test Team', created_by=self.coach)
-        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
+        TeamMembership.objects.create(
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
 
         self.authenticate(self.athlete1)
         response = self.client.post(
@@ -393,7 +453,12 @@ class TeamApiTestCase(WgerTestCase):
         start_date after end_date returns 400.
         """
         team = Team.objects.create(name='Test Team', created_by=self.coach)
-        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
+        TeamMembership.objects.create(
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
 
         self.authenticate(self.coach)
         response = self.client.post(
@@ -413,9 +478,17 @@ class TeamApiTestCase(WgerTestCase):
         PUT/PATCH/DELETE on a program assignment return 405.
         """
         team = Team.objects.create(name='Test Team', created_by=self.coach)
-        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
         TeamMembership.objects.create(
-            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
+        TeamMembership.objects.create(
+            team=team,
+            user=self.athlete1,
+            role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
         )
 
         self.authenticate(self.coach)
@@ -450,9 +523,17 @@ class TeamApiTestCase(WgerTestCase):
         A coach can assign to their own team through the assignment endpoint.
         """
         team = Team.objects.create(name='Test Team', created_by=self.coach)
-        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
         TeamMembership.objects.create(
-            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
+        TeamMembership.objects.create(
+            team=team,
+            user=self.athlete1,
+            role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
         )
 
         self.authenticate(self.coach)
@@ -476,7 +557,10 @@ class TeamApiTestCase(WgerTestCase):
         """
         team = Team.objects.create(name='Test Team', created_by=self.coach)
         membership = TeamMembership.objects.create(
-            team=team, user=self.coach, role=TeamMembership.Role.COACH
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
         )
 
         self.authenticate(self.coach)
@@ -492,13 +576,24 @@ class TeamApiTestCase(WgerTestCase):
         Changing the team of a membership returns 400.
         """
         team = Team.objects.create(name='Test Team', created_by=self.coach)
-        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
+        TeamMembership.objects.create(
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
         membership = TeamMembership.objects.create(
-            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+            team=team,
+            user=self.athlete1,
+            role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
         )
         other_team = Team.objects.create(name='Other Team', created_by=self.coach)
         TeamMembership.objects.create(
-            team=other_team, user=self.coach, role=TeamMembership.Role.COACH
+            team=other_team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
         )
 
         self.authenticate(self.coach)
@@ -514,9 +609,17 @@ class TeamApiTestCase(WgerTestCase):
         Changing the user of a membership returns 400.
         """
         team = Team.objects.create(name='Test Team', created_by=self.coach)
-        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
+        TeamMembership.objects.create(
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
         membership = TeamMembership.objects.create(
-            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+            team=team,
+            user=self.athlete1,
+            role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
         )
 
         self.authenticate(self.coach)
@@ -534,9 +637,17 @@ class TeamApiTestCase(WgerTestCase):
         An athlete sees the teams they are a member of.
         """
         team = Team.objects.create(name='Test Team', created_by=self.coach)
-        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
         TeamMembership.objects.create(
-            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
+        TeamMembership.objects.create(
+            team=team,
+            user=self.athlete1,
+            role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
         )
 
         self.authenticate(self.athlete1)
@@ -550,9 +661,17 @@ class TeamApiTestCase(WgerTestCase):
         An athlete sees their own memberships.
         """
         team = Team.objects.create(name='Test Team', created_by=self.coach)
-        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
+        TeamMembership.objects.create(
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
         membership = TeamMembership.objects.create(
-            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+            team=team,
+            user=self.athlete1,
+            role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
         )
 
         self.authenticate(self.athlete1)
@@ -566,9 +685,17 @@ class TeamApiTestCase(WgerTestCase):
         An athlete sees only their own program assignments.
         """
         team = Team.objects.create(name='Test Team', created_by=self.coach)
-        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
         TeamMembership.objects.create(
-            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
+        TeamMembership.objects.create(
+            team=team,
+            user=self.athlete1,
+            role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
         )
 
         self.authenticate(self.coach)
@@ -596,9 +723,17 @@ class TeamApiTestCase(WgerTestCase):
         An athlete who is a member (not coach) cannot modify a team.
         """
         team = Team.objects.create(name='Test Team', created_by=self.coach)
-        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
         TeamMembership.objects.create(
-            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
+        TeamMembership.objects.create(
+            team=team,
+            user=self.athlete1,
+            role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
         )
 
         self.authenticate(self.athlete1)
@@ -614,7 +749,12 @@ class TeamApiTestCase(WgerTestCase):
         An athlete cannot create a membership for a team they do not coach.
         """
         team = Team.objects.create(name='Test Team', created_by=self.coach)
-        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
+        TeamMembership.objects.create(
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
 
         self.authenticate(self.athlete1)
         response = self.client.post(
@@ -635,9 +775,17 @@ class TeamApiTestCase(WgerTestCase):
         A coach of another team gets 404 for a foreign assignment.
         """
         team = Team.objects.create(name='Test Team', created_by=self.coach)
-        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
         TeamMembership.objects.create(
-            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
+        TeamMembership.objects.create(
+            team=team,
+            user=self.athlete1,
+            role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
         )
 
         self.authenticate(self.coach)
@@ -655,7 +803,10 @@ class TeamApiTestCase(WgerTestCase):
 
         other_team = Team.objects.create(name='Other Team', created_by=self.other_coach)
         TeamMembership.objects.create(
-            team=other_team, user=self.other_coach, role=TeamMembership.Role.COACH
+            team=other_team,
+            user=self.other_coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
         )
 
         self.authenticate(self.other_coach)
@@ -671,9 +822,17 @@ class TeamApiTestCase(WgerTestCase):
         Deleting the template keeps the assignment and copies; template is NULL.
         """
         team = Team.objects.create(name='Test Team', created_by=self.coach)
-        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
         TeamMembership.objects.create(
-            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
+        TeamMembership.objects.create(
+            team=team,
+            user=self.athlete1,
+            role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
         )
 
         self.authenticate(self.coach)
@@ -704,9 +863,17 @@ class TeamApiTestCase(WgerTestCase):
         Deleting a team removes its assignments, the athletes keep their copies and logs.
         """
         team = Team.objects.create(name='Test Team', created_by=self.coach)
-        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
         TeamMembership.objects.create(
-            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
+        TeamMembership.objects.create(
+            team=team,
+            user=self.athlete1,
+            role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
         )
 
         self.authenticate(self.coach)
@@ -751,9 +918,17 @@ class TeamApiTestCase(WgerTestCase):
         An athlete cannot delete a team.
         """
         team = Team.objects.create(name='Test Team', created_by=self.coach)
-        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
         TeamMembership.objects.create(
-            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
+        TeamMembership.objects.create(
+            team=team,
+            user=self.athlete1,
+            role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
         )
 
         self.authenticate(self.athlete1)
@@ -766,12 +941,23 @@ class TeamApiTestCase(WgerTestCase):
         Deleting the account of the coach keeps the team, the assignment and the copies.
         """
         team = Team.objects.create(name='Test Team', created_by=self.coach)
-        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
         TeamMembership.objects.create(
-            team=team, user=self.other_coach, role=TeamMembership.Role.COACH
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
         )
         TeamMembership.objects.create(
-            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+            team=team,
+            user=self.other_coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
+        TeamMembership.objects.create(
+            team=team,
+            user=self.athlete1,
+            role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
         )
 
         self.authenticate(self.coach)
@@ -803,3 +989,324 @@ class TeamApiTestCase(WgerTestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsNone(response.data['assigned_by'])
+
+    # --- Invitations ---
+
+    def make_team(self):
+        """
+        A team with the coach as active coach.
+        """
+        team = Team.objects.create(name='Test Team', created_by=self.coach)
+        TeamMembership.objects.create(
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
+        return team
+
+    def invite(self, team, user, role=TeamMembership.Role.ATHLETE):
+        return TeamMembership.objects.create(team=team, user=user, role=role)
+
+    def assign_to_team(self, team):
+        return self.client.post(
+            reverse('program-assignment-list'),
+            {
+                'template': self.template.pk,
+                'team': team.pk,
+                'start_date': '2026-11-10',
+                'end_date': '2026-12-10',
+            },
+            format='json',
+        )
+
+    def test_team_creator_is_active_coach(self):
+        """
+        The creator of a team is an active coach without accepting anything.
+        """
+        self.authenticate(self.coach)
+        response = self.client.post(reverse('team-list'), {'name': 'New Team'}, format='json')
+        membership = TeamMembership.objects.get(team_id=response.data['id'], user=self.coach)
+        self.assertEqual(membership.status, TeamMembership.Status.ACTIVE)
+
+    def test_new_membership_is_an_invitation(self):
+        """
+        A membership added by a coach is invited, a status in the payload is ignored.
+        """
+        team = self.make_team()
+        self.authenticate(self.coach)
+        response = self.client.post(
+            reverse('team-membership-list'),
+            {
+                'team': team.pk,
+                'user': self.athlete1.pk,
+                'role': TeamMembership.Role.ATHLETE,
+                'status': TeamMembership.Status.ACTIVE,
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['status'], TeamMembership.Status.INVITED)
+        membership = TeamMembership.objects.get(pk=response.data['id'])
+        self.assertEqual(membership.status, TeamMembership.Status.INVITED)
+
+    def test_coach_cannot_activate_membership(self):
+        """
+        A coach cannot set the status of a membership, only the invited user accepts.
+        """
+        team = self.make_team()
+        membership = self.invite(team, self.athlete1)
+
+        self.authenticate(self.coach)
+        detail = reverse('team-membership-detail', kwargs={'pk': membership.pk})
+        self.client.patch(detail, {'status': TeamMembership.Status.ACTIVE}, format='json')
+        membership.refresh_from_db()
+        self.assertEqual(membership.status, TeamMembership.Status.INVITED)
+
+        response = self.client.post(reverse('team-membership-accept', kwargs={'pk': membership.pk}))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        membership.refresh_from_db()
+        self.assertEqual(membership.status, TeamMembership.Status.INVITED)
+
+    def test_accept_invitation(self):
+        """
+        Only after accepting the invitation an athlete receives copies of team assignments.
+        """
+        team = self.make_team()
+        self.invite(team, self.athlete2).delete()
+        TeamMembership.objects.create(
+            team=team,
+            user=self.athlete2,
+            role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
+        )
+        membership = self.invite(team, self.athlete1)
+
+        self.authenticate(self.coach)
+        response = self.assign_to_team(team)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertFalse(AssignedRoutine.objects.filter(athlete=self.athlete1).exists())
+        self.assertFalse(Routine.objects.filter(user=self.athlete1).exists())
+
+        self.authenticate(self.athlete1)
+        response = self.client.post(reverse('team-membership-accept', kwargs={'pk': membership.pk}))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], TeamMembership.Status.ACTIVE)
+        membership.refresh_from_db()
+        self.assertEqual(membership.status, TeamMembership.Status.ACTIVE)
+
+        # Accepting twice is an error
+        response = self.client.post(reverse('team-membership-accept', kwargs={'pk': membership.pk}))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        self.authenticate(self.coach)
+        response = self.client.post(
+            reverse('program-assignment-list'),
+            {
+                'template': self.template.pk,
+                'athlete': self.athlete1.pk,
+                'start_date': '2026-11-10',
+                'end_date': '2026-12-10',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(AssignedRoutine.objects.filter(athlete=self.athlete1).count(), 1)
+
+    def test_decline_invitation(self):
+        """
+        Declining removes the invitation, an active membership cannot be declined.
+        """
+        team = self.make_team()
+        membership = self.invite(team, self.athlete1)
+
+        self.authenticate(self.athlete1)
+        response = self.client.post(
+            reverse('team-membership-decline', kwargs={'pk': membership.pk})
+        )
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(TeamMembership.objects.filter(pk=membership.pk).exists())
+
+        active = TeamMembership.objects.create(
+            team=team,
+            user=self.athlete1,
+            role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
+        )
+        response = self.client.post(reverse('team-membership-decline', kwargs={'pk': active.pk}))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(TeamMembership.objects.filter(pk=active.pk).exists())
+
+    def test_foreign_user_cannot_answer_invitation(self):
+        """
+        The invitation of another user cannot be accepted or declined (404).
+        """
+        team = self.make_team()
+        membership = self.invite(team, self.athlete1)
+
+        self.authenticate(self.athlete2)
+        for name in ('team-membership-accept', 'team-membership-decline'):
+            response = self.client.post(reverse(name, kwargs={'pk': membership.pk}))
+            self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND, name)
+
+        membership.refresh_from_db()
+        self.assertEqual(membership.status, TeamMembership.Status.INVITED)
+
+    def test_invited_user_sees_invitation_but_no_team_data(self):
+        """
+        An invited user sees the own invitation and the team, but no assignments and no
+        other members.
+        """
+        team = self.make_team()
+        membership = self.invite(team, self.athlete1)
+        TeamMembership.objects.create(
+            team=team,
+            user=self.athlete2,
+            role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
+        )
+        self.authenticate(self.coach)
+        assignment_id = self.assign_to_team(team).data['id']
+
+        self.authenticate(self.athlete1)
+        response = self.client.get(reverse('team-membership-list'))
+        self.assertEqual([m['id'] for m in response.data['results']], [membership.pk])
+
+        response = self.client.get(reverse('team-detail', kwargs={'pk': team.pk}))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        response = self.client.get(reverse('program-assignment-list'))
+        self.assertEqual(response.data['results'], [])
+        response = self.client.get(
+            reverse('program-assignment-detail', kwargs={'pk': assignment_id})
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_invited_coach_has_no_coach_rights(self):
+        """
+        A coach who has not accepted yet cannot change the team, manage members or assign.
+        """
+        team = self.make_team()
+        TeamMembership.objects.create(
+            team=team,
+            user=self.athlete1,
+            role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
+        )
+        self.invite(team, self.other_coach, role=TeamMembership.Role.COACH)
+        template = Routine.objects.create(
+            user=self.other_coach,
+            name='Other coach template',
+            is_template=True,
+            start=datetime.date(2026, 11, 1),
+            end=datetime.date(2026, 11, 30),
+        )
+
+        self.authenticate(self.other_coach)
+        response = self.client.patch(
+            reverse('team-detail', kwargs={'pk': team.pk}), {'name': 'Taken over'}, format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        response = self.client.post(
+            reverse('team-membership-list'),
+            {'team': team.pk, 'user': self.athlete2.pk, 'role': TeamMembership.Role.ATHLETE},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        response = self.client.get(reverse('team-membership-list'))
+        self.assertEqual(len(response.data['results']), 1)
+
+        response = self.client.post(
+            reverse('program-assignment-list'),
+            {
+                'template': template.pk,
+                'team': team.pk,
+                'start_date': '2026-11-10',
+                'end_date': '2026-12-10',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(AssignedRoutine.objects.count(), 0)
+
+    def test_invited_coach_does_not_count_as_coach(self):
+        """
+        The last active coach cannot be removed or demoted while the other coach is invited.
+        """
+        team = self.make_team()
+        self.invite(team, self.other_coach, role=TeamMembership.Role.COACH)
+        membership = TeamMembership.objects.get(team=team, user=self.coach)
+        detail = reverse('team-membership-detail', kwargs={'pk': membership.pk})
+
+        self.authenticate(self.coach)
+        response = self.client.delete(detail)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.patch(detail, {'role': TeamMembership.Role.ATHLETE}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        membership.refresh_from_db()
+        self.assertEqual(membership.role, TeamMembership.Role.COACH)
+
+    # --- Reading assignments ---
+
+    def test_individual_assignment_is_visible_to_coach_and_athlete(self):
+        """
+        An assignment to a single athlete can be read by the athlete and the coaches of the
+        athlete, as list and as detail. Other users get 404.
+        """
+        team = self.make_team()
+        for user in (self.athlete1, self.athlete2):
+            TeamMembership.objects.create(
+                team=team,
+                user=user,
+                role=TeamMembership.Role.ATHLETE,
+                status=TeamMembership.Status.ACTIVE,
+            )
+
+        self.authenticate(self.coach)
+        response = self.client.post(
+            reverse('program-assignment-list'),
+            {
+                'template': self.template.pk,
+                'athlete': self.athlete1.pk,
+                'start_date': '2026-11-10',
+                'end_date': '2026-12-10',
+            },
+            format='json',
+        )
+        assignment_id = response.data['id']
+        detail = reverse('program-assignment-detail', kwargs={'pk': assignment_id})
+
+        for user in (self.coach, self.athlete1):
+            self.authenticate(user)
+            response = self.client.get(reverse('program-assignment-list'))
+            self.assertEqual([a['id'] for a in response.data['results']], [assignment_id], user)
+            self.assertEqual(self.client.get(detail).status_code, status.HTTP_200_OK, user)
+
+        for user in (self.athlete2, self.other_coach):
+            self.authenticate(user)
+            response = self.client.get(reverse('program-assignment-list'))
+            self.assertEqual(response.data['results'], [], user)
+            self.assertEqual(self.client.get(detail).status_code, status.HTTP_404_NOT_FOUND, user)
+
+    def test_athlete_reads_team_assignment_detail(self):
+        """
+        An active athlete of the team can read the detail of a team assignment.
+        """
+        team = self.make_team()
+        TeamMembership.objects.create(
+            team=team,
+            user=self.athlete1,
+            role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
+        )
+        self.authenticate(self.coach)
+        assignment_id = self.assign_to_team(team).data['id']
+
+        self.authenticate(self.athlete1)
+        response = self.client.get(
+            reverse('program-assignment-detail', kwargs={'pk': assignment_id})
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)

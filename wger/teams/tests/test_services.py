@@ -70,22 +70,28 @@ class AssignProgramTestCase(WgerTestCase):
         # A team with the coach and three athletes
         self.team = Team.objects.create(name='Test Team', created_by=self.coach)
         TeamMembership.objects.create(
-            team=self.team, user=self.coach, role=TeamMembership.Role.COACH
+            team=self.team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
         )
         TeamMembership.objects.create(
             team=self.team,
             user=self.athlete1,
             role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
         )
         TeamMembership.objects.create(
             team=self.team,
             user=self.athlete2,
             role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
         )
         TeamMembership.objects.create(
             team=self.team,
             user=self.athlete3,
             role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
         )
 
         # Another team where the other coach is coach and athlete1 is athlete
@@ -94,11 +100,13 @@ class AssignProgramTestCase(WgerTestCase):
             team=self.other_team,
             user=self.other_coach,
             role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
         )
         TeamMembership.objects.create(
             team=self.other_team,
             user=self.athlete1,
             role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
         )
 
         # A template routine owned by the coach, with one day, slot, entry,
@@ -239,7 +247,10 @@ class AssignProgramTestCase(WgerTestCase):
         """
         empty_team = Team.objects.create(name='Empty Team', created_by=self.coach)
         TeamMembership.objects.create(
-            team=empty_team, user=self.coach, role=TeamMembership.Role.COACH
+            team=empty_team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
         )
 
         with self.assertRaises(ValidationError):
@@ -536,3 +547,75 @@ class AssignProgramTestCase(WgerTestCase):
 
         with self.assertRaises(ValidationError):
             self.assign(athlete=self.athlete1)
+
+    def invite(self, user, role=TeamMembership.Role.ATHLETE, team=None):
+        return TeamMembership.objects.create(team=team or self.team, user=user, role=role)
+
+    def test_membership_is_invited_by_default(self):
+        """
+        A membership created without a status is an invitation.
+        """
+        membership = self.invite(self.other_coach)
+        self.assertEqual(membership.status, TeamMembership.Status.INVITED)
+
+    def test_invited_athlete_gets_no_copy(self):
+        """
+        A team assignment only reaches active athletes, not invited ones.
+        """
+        pending = User.objects.create_user(username='pending', email='pending@example.com')
+        self.invite(pending)
+
+        assignment = self.assign(team=self.team)
+
+        athletes = {a.athlete for a in AssignedRoutine.objects.filter(assignment=assignment)}
+        self.assertEqual(athletes, {self.athlete1, self.athlete2, self.athlete3})
+        self.assertFalse(Routine.objects.filter(user=pending).exists())
+
+    def test_team_with_only_invited_athletes(self):
+        """
+        A team whose athletes are all still invited has no assignment targets.
+        """
+        team = Team.objects.create(name='Pending Team', created_by=self.coach)
+        TeamMembership.objects.create(
+            team=team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
+        pending = User.objects.create_user(username='pending', email='pending@example.com')
+        self.invite(pending, team=team)
+
+        with self.assertRaises(ValidationError):
+            self.assign(team=team)
+        self.assertFalse(Routine.objects.filter(user=pending).exists())
+
+    def test_invited_athlete_cannot_be_assigned_individually(self):
+        """
+        An individual assignment to an invited athlete raises PermissionDenied.
+        """
+        pending = User.objects.create_user(username='pending', email='pending@example.com')
+        self.invite(pending)
+
+        with self.assertRaises(PermissionDenied):
+            self.assign(athlete=pending)
+        self.assertFalse(Routine.objects.filter(user=pending).exists())
+
+    def test_invited_coach_cannot_assign(self):
+        """
+        A coach who has not accepted the invitation cannot assign, neither to the team nor
+        to one of its athletes.
+        """
+        template = Routine.objects.create(
+            user=self.other_coach,
+            name='Other coach template',
+            is_template=True,
+            start=datetime.date(2026, 11, 1),
+            end=datetime.date(2026, 11, 30),
+        )
+        self.invite(self.other_coach, role=TeamMembership.Role.COACH)
+
+        with self.assertRaises(PermissionDenied):
+            self.assign(team=self.team, assigned_by=self.other_coach, template=template)
+        with self.assertRaises(PermissionDenied):
+            self.assign(athlete=self.athlete2, assigned_by=self.other_coach, template=template)
+        self.assertEqual(AssignedRoutine.objects.count(), 0)

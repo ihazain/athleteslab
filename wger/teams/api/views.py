@@ -22,10 +22,15 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import models, transaction
 
 # Third Party
+from drf_spectacular.utils import extend_schema
 from rest_framework import (
     exceptions,
+    status,
     viewsets,
 )
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 # wger
 from wger.teams.api.permissions import IsAssignmentCoach, IsTeamCoach
@@ -72,6 +77,7 @@ class TeamViewSet(viewsets.ModelViewSet):
                 team=team,
                 user=self.request.user,
                 role=TeamMembership.Role.COACH,
+                status=TeamMembership.Status.ACTIVE,
             )
 
 
@@ -79,8 +85,9 @@ class TeamMembershipViewSet(viewsets.ModelViewSet):
     """
     API endpoint for team membership objects.
 
-    Only coaches of a team can manage its memberships. The last coach of a
-    team cannot remove themselves.
+    Only coaches of a team can manage its memberships. A new membership is an
+    invitation that only the invited user can accept or decline. The last
+    active coach of a team cannot be removed or demoted.
     """
 
     serializer_class = TeamMembershipSerializer
@@ -98,6 +105,7 @@ class TeamMembershipViewSet(viewsets.ModelViewSet):
             | models.Q(
                 team__memberships__user=self.request.user,
                 team__memberships__role=TeamMembership.Role.COACH,
+                team__memberships__status=TeamMembership.Status.ACTIVE,
             )
         ).distinct()
 
@@ -107,37 +115,70 @@ class TeamMembershipViewSet(viewsets.ModelViewSet):
             team=team,
             user=self.request.user,
             role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
         ).exists():
             raise exceptions.PermissionDenied('Only a coach of this team can add memberships.')
-        serializer.save()
+        serializer.save(status=TeamMembership.Status.INVITED)
 
     def perform_update(self, serializer):
         instance = serializer.instance
         new_role = serializer.validated_data.get('role', instance.role)
-        if (
-            instance.role == TeamMembership.Role.COACH
-            and new_role != TeamMembership.Role.COACH
-            and not TeamMembership.objects.filter(
-                team=instance.team, role=TeamMembership.Role.COACH
-            )
-            .exclude(pk=instance.pk)
-            .exists()
-        ):
+        if self._is_last_active_coach(instance) and new_role != TeamMembership.Role.COACH:
             raise exceptions.ValidationError('A team needs at least one coach.')
         serializer.save()
 
     def perform_destroy(self, instance):
-        team = instance.team
-        if (
-            instance.role == TeamMembership.Role.COACH
-            and TeamMembership.objects.filter(
-                team=team,
-                role=TeamMembership.Role.COACH,
-            ).count()
-            <= 1
-        ):
+        if self._is_last_active_coach(instance):
             raise exceptions.ValidationError('The last coach of a team cannot be removed.')
         super().perform_destroy(instance)
+
+    @staticmethod
+    def _is_last_active_coach(membership: TeamMembership) -> bool:
+        if (
+            membership.role != TeamMembership.Role.COACH
+            or membership.status != TeamMembership.Status.ACTIVE
+        ):
+            return False
+        return (
+            not TeamMembership.objects.filter(
+                team=membership.team,
+                role=TeamMembership.Role.COACH,
+                status=TeamMembership.Status.ACTIVE,
+            )
+            .exclude(pk=membership.pk)
+            .exists()
+        )
+
+    def _get_own_invitation(self) -> TeamMembership:
+        """
+        Returns the open invitation of the requesting user, coaches cannot answer for others.
+        """
+        membership = self.get_object()
+        if membership.user_id != self.request.user.pk:
+            raise exceptions.PermissionDenied('Only the invited user can answer an invitation.')
+        if membership.status != TeamMembership.Status.INVITED:
+            raise exceptions.ValidationError('This membership is not an open invitation.')
+        return membership
+
+    @extend_schema(request=None, responses=TeamMembershipSerializer)
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def accept(self, request, pk=None):
+        """
+        Accept the invitation, the membership becomes active.
+        """
+        membership = self._get_own_invitation()
+        membership.status = TeamMembership.Status.ACTIVE
+        membership.save(update_fields=['status'])
+        return Response(self.get_serializer(membership).data)
+
+    @extend_schema(request=None, responses={204: None})
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def decline(self, request, pk=None):
+        """
+        Decline the invitation, the membership is removed.
+        """
+        self._get_own_invitation().delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ProgramAssignmentViewSet(viewsets.ModelViewSet):
@@ -162,10 +203,25 @@ class ProgramAssignmentViewSet(viewsets.ModelViewSet):
 
         user = self.request.user
 
-        # Athletes see assignments for teams they belong to or where they
-        # are the direct athlete. Coaches see assignments for teams they coach.
+        # Active members see the assignments of their teams. Assignments to a
+        # single athlete are visible to that athlete and to their coaches.
+        coached_athletes = TeamMembership.objects.filter(
+            role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
+            team__in=TeamMembership.objects.filter(
+                user=user,
+                role=TeamMembership.Role.COACH,
+                status=TeamMembership.Status.ACTIVE,
+            ).values('team'),
+        ).values('user')
+
         return ProgramAssignment.objects.filter(
-            models.Q(athlete=user) | models.Q(team__memberships__user=user)
+            models.Q(athlete=user)
+            | models.Q(athlete__in=coached_athletes)
+            | models.Q(
+                team__memberships__user=user,
+                team__memberships__status=TeamMembership.Status.ACTIVE,
+            )
         ).distinct()
 
     def perform_create(self, serializer):

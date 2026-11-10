@@ -115,6 +115,15 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
+                    'status',
+                    models.CharField(
+                        choices=[('invited', 'Invited'), ('active', 'Active')],
+                        default='invited',
+                        max_length=10,
+                        verbose_name='Status',
+                    ),
+                ),
+                (
                     'team',
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,

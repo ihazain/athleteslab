@@ -23,8 +23,8 @@ from wger.teams.models import Team, TeamMembership
 
 class IsTeamCoach(permissions.BasePermission):
     """
-    Allows access to members of a team for safe methods, and to coaches for
-    write methods.
+    Allows access to members of a team for safe methods, and to active coaches
+    for write methods. Invited users can read, so they see what they are invited to.
 
     Used for Team and TeamMembership objects. Foreign objects yield 404
     (via queryset filtering), not 403, so their existence is not leaked.
@@ -50,12 +50,14 @@ class IsTeamCoach(permissions.BasePermission):
             team=team,
             user=request.user,
             role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
         ).exists()
 
 
 class IsAssignmentCoach(permissions.BasePermission):
     """
-    Allows access only to coaches who can use the assignment's template.
+    Allows reading to everyone who can see the assignment (the queryset decides
+    that) and everything else only to coaches.
 
     Used for ProgramAssignment objects. The assignment's team (or the team
     shared with the athlete) determines whether the requesting user is a
@@ -68,11 +70,15 @@ class IsAssignmentCoach(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         assignment = obj
 
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
         if assignment.team is not None:
             return TeamMembership.objects.filter(
                 team=assignment.team,
                 user=request.user,
                 role=TeamMembership.Role.COACH,
+                status=TeamMembership.Status.ACTIVE,
             ).exists()
 
         # Single-athlete assignment: requesting user must be a coach sharing
@@ -80,6 +86,8 @@ class IsAssignmentCoach(permissions.BasePermission):
         return TeamMembership.objects.filter(
             user=request.user,
             role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
             team__memberships__user=assignment.athlete,
             team__memberships__role=TeamMembership.Role.ATHLETE,
+            team__memberships__status=TeamMembership.Status.ACTIVE,
         ).exists()

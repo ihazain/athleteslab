@@ -6,17 +6,23 @@
 ## New features
 
 ### Teams (beta)
-A new `wger.teams` app lets coaches create teams, add athletes and coaches as
-members, and assign routine templates to either a whole team or a single
+A new `wger.teams` app lets coaches create teams, invite athletes and coaches
+as members, and assign routine templates to either a whole team or a single
 athlete. Each assignment creates a private snapshot copy of the template per
-athlete, so later changes to the template never affect existing plans.
-Assigning the same template to an athlete again for an overlapping period is
-rejected with a 400, a team assignment is rejected as a whole in that case.
-Deleting a team removes its assignments, the athletes keep their copies and
-logs. Deleting a coach account keeps teams and assignments, `created_by` and
-`assigned_by` are then `null`. The
+athlete, so later changes to the template never affect existing plans. The
 backend and REST API (`/api/v2/team/`, `/api/v2/team-membership/`,
 `/api/v2/program-assignment/`) are complete; frontend support follows later.
+
+* A new membership is an invitation (`status: invited`). Only the invited user
+  can answer it with `team-membership/{id}/accept/` or `.../decline/`. Invited
+  members receive no copies and have no coach rights until they accept.
+* Assigning the same template to an athlete again for an overlapping period is
+  rejected with a 400, a team assignment is rejected as a whole in that case.
+* Assignments to a single athlete are visible to the athlete and to their
+  coaches.
+* Deleting a team removes its assignments, the athletes keep their copies and
+  logs. Deleting a coach account keeps teams and assignments, `created_by` and
+  `assigned_by` are then `null`.
 
 ### Double progression
 Progression requirements can now reference the top of the prescribed range via the new rules `max_repetitions` and `max_weight`, and the new `all_sets` flag requires every prescribed set to qualify. Together they enable classic double progression schemes ("work from 8 to 12 reps at a fixed weight, add weight only once all sets reach 12"), e.g. `{"rules": ["max_repetitions"], "all_sets": true}`.

@@ -44,7 +44,8 @@ class TeamMembershipSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TeamMembership
-        fields = ('id', 'team', 'user', 'role')
+        fields = ('id', 'team', 'user', 'role', 'status')
+        read_only_fields = ('status',)
 
     def validate(self, attrs):
         if self.instance is not None:

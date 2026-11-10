@@ -31,6 +31,10 @@ class TeamMembership(models.Model):
         COACH = 'coach', 'Coach'
         ATHLETE = 'athlete', 'Athlete'
 
+    class Status(models.TextChoices):
+        INVITED = 'invited', 'Invited'
+        ACTIVE = 'active', 'Active'
+
     class Meta:
         constraints = [
             models.UniqueConstraint(
@@ -57,6 +61,14 @@ class TeamMembership(models.Model):
         choices=Role.choices,
         verbose_name='Role',
     )
+
+    status = models.CharField(
+        max_length=10,
+        choices=Status.choices,
+        default=Status.INVITED,
+        verbose_name='Status',
+    )
+    """Only active members count, an invitation has to be accepted by the user first"""
 
     def __str__(self):
         return f'{self.user.username} - {self.team.name} ({self.role})'

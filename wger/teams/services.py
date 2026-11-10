@@ -135,6 +135,7 @@ def assign_program(*, template, assigned_by, start_date, end_date, team=None, at
                 team=team,
                 user=assigned_by,
                 role=TeamMembership.Role.COACH,
+                status=TeamMembership.Status.ACTIVE,
             ).exists():
                 raise PermissionDenied('assigned_by is not a coach of this team.')
             athletes = [
@@ -142,14 +143,17 @@ def assign_program(*, template, assigned_by, start_date, end_date, team=None, at
                 for membership in TeamMembership.objects.filter(
                     team=team,
                     role=TeamMembership.Role.ATHLETE,
+                    status=TeamMembership.Status.ACTIVE,
                 ).select_related('user')
             ]
         else:
             if not TeamMembership.objects.filter(
                 user=assigned_by,
                 role=TeamMembership.Role.COACH,
+                status=TeamMembership.Status.ACTIVE,
                 team__memberships__user=athlete,
                 team__memberships__role=TeamMembership.Role.ATHLETE,
+                team__memberships__status=TeamMembership.Status.ACTIVE,
             ).exists():
                 raise PermissionDenied('assigned_by is not a coach of this athlete.')
             athletes = [athlete]
