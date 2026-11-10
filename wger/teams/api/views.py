@@ -48,8 +48,7 @@ class TeamViewSet(viewsets.ModelViewSet):
     """
     API endpoint for team objects.
 
-    Coaches see only teams they coach. Athletes see no teams through this
-    endpoint (they see their memberships through the team-membership endpoint).
+    Members see teams they belong to. Coaches can modify them.
     """
 
     serializer_class = TeamSerializer
@@ -64,7 +63,6 @@ class TeamViewSet(viewsets.ModelViewSet):
 
         return Team.objects.filter(
             memberships__user=self.request.user,
-            memberships__role=TeamMembership.Role.COACH,
         ).distinct()
 
     def perform_create(self, serializer):
@@ -96,8 +94,11 @@ class TeamMembershipViewSet(viewsets.ModelViewSet):
             return TeamMembership.objects.none()
 
         return TeamMembership.objects.filter(
-            team__memberships__user=self.request.user,
-            team__memberships__role=TeamMembership.Role.COACH,
+            models.Q(user=self.request.user)
+            | models.Q(
+                team__memberships__user=self.request.user,
+                team__memberships__role=TeamMembership.Role.COACH,
+            )
         ).distinct()
 
     def perform_create(self, serializer):
@@ -108,6 +109,21 @@ class TeamMembershipViewSet(viewsets.ModelViewSet):
             role=TeamMembership.Role.COACH,
         ).exists():
             raise exceptions.PermissionDenied('Only a coach of this team can add memberships.')
+        serializer.save()
+
+    def perform_update(self, serializer):
+        instance = serializer.instance
+        new_role = serializer.validated_data.get('role', instance.role)
+        if (
+            instance.role == TeamMembership.Role.COACH
+            and new_role != TeamMembership.Role.COACH
+            and not TeamMembership.objects.filter(
+                team=instance.team, role=TeamMembership.Role.COACH
+            )
+            .exclude(pk=instance.pk)
+            .exists()
+        ):
+            raise exceptions.ValidationError('A team needs at least one coach.')
         serializer.save()
 
     def perform_destroy(self, instance):
@@ -146,15 +162,10 @@ class ProgramAssignmentViewSet(viewsets.ModelViewSet):
 
         user = self.request.user
 
-        # Coaches see assignments for teams they coach, or assignments where
-        # they coach the athlete through a shared team.
-        # Athletes see only their own assignments.
+        # Athletes see assignments for teams they belong to or where they
+        # are the direct athlete. Coaches see assignments for teams they coach.
         return ProgramAssignment.objects.filter(
-            models.Q(
-                team__memberships__user=user,
-                team__memberships__role=TeamMembership.Role.COACH,
-            )
-            | models.Q(athlete=user)
+            models.Q(athlete=user) | models.Q(team__memberships__user=user)
         ).distinct()
 
     def perform_create(self, serializer):

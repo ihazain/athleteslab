@@ -74,7 +74,10 @@ class Migration(migrations.Migration):
                 (
                     'template',
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.PROTECT,
+                        blank=True,
+                        default=None,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
                         to='manager.routine',
                         verbose_name='Template',
                     ),

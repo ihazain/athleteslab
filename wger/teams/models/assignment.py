@@ -43,7 +43,10 @@ class ProgramAssignment(models.Model):
     template = models.ForeignKey(
         Routine,
         verbose_name='Template',
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
     )
 
     team = models.ForeignKey(

@@ -23,7 +23,8 @@ from wger.teams.models import Team, TeamMembership
 
 class IsTeamCoach(permissions.BasePermission):
     """
-    Allows access only to coaches of the team the object belongs to.
+    Allows access to members of a team for safe methods, and to coaches for
+    write methods.
 
     Used for Team and TeamMembership objects. Foreign objects yield 404
     (via queryset filtering), not 403, so their existence is not leaked.
@@ -40,6 +41,11 @@ class IsTeamCoach(permissions.BasePermission):
         else:
             return False
 
+        if request.method in permissions.SAFE_METHODS:
+            # Any member can read
+            return TeamMembership.objects.filter(team=team, user=request.user).exists()
+
+        # Only coaches can write
         return TeamMembership.objects.filter(
             team=team,
             user=request.user,

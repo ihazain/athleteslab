@@ -398,3 +398,232 @@ class TeamApiTestCase(WgerTestCase):
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    # --- Hardening: membership updates ---
+
+    def test_patch_last_coach_to_athlete(self):
+        """
+        Downgrading the last coach to athlete returns 400.
+        """
+        team = Team.objects.create(name='Test Team', created_by=self.coach)
+        membership = TeamMembership.objects.create(
+            team=team, user=self.coach, role=TeamMembership.Role.COACH
+        )
+
+        self.authenticate(self.coach)
+        response = self.client.patch(
+            reverse('team-membership-detail', kwargs={'pk': membership.pk}),
+            {'role': TeamMembership.Role.ATHLETE},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_patch_membership_change_team(self):
+        """
+        Changing the team of a membership returns 400.
+        """
+        team = Team.objects.create(name='Test Team', created_by=self.coach)
+        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
+        membership = TeamMembership.objects.create(
+            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+        )
+        other_team = Team.objects.create(name='Other Team', created_by=self.coach)
+        TeamMembership.objects.create(
+            team=other_team, user=self.coach, role=TeamMembership.Role.COACH
+        )
+
+        self.authenticate(self.coach)
+        response = self.client.patch(
+            reverse('team-membership-detail', kwargs={'pk': membership.pk}),
+            {'team': other_team.pk},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_patch_membership_change_user(self):
+        """
+        Changing the user of a membership returns 400.
+        """
+        team = Team.objects.create(name='Test Team', created_by=self.coach)
+        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
+        membership = TeamMembership.objects.create(
+            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+        )
+
+        self.authenticate(self.coach)
+        response = self.client.patch(
+            reverse('team-membership-detail', kwargs={'pk': membership.pk}),
+            {'user': self.athlete2.pk},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    # --- Hardening: athlete read access ---
+
+    def test_athlete_sees_own_teams(self):
+        """
+        An athlete sees the teams they are a member of.
+        """
+        team = Team.objects.create(name='Test Team', created_by=self.coach)
+        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
+        TeamMembership.objects.create(
+            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+        )
+
+        self.authenticate(self.athlete1)
+        response = self.client.get(reverse('team-list'), format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        names = {t['name'] for t in response.data.get('results', response.data)}
+        self.assertIn('Test Team', names)
+
+    def test_athlete_sees_own_memberships(self):
+        """
+        An athlete sees their own memberships.
+        """
+        team = Team.objects.create(name='Test Team', created_by=self.coach)
+        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
+        membership = TeamMembership.objects.create(
+            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+        )
+
+        self.authenticate(self.athlete1)
+        response = self.client.get(reverse('team-membership-list'), format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ids = {m['id'] for m in response.data.get('results', response.data)}
+        self.assertIn(membership.pk, ids)
+
+    def test_athlete_sees_own_assignments(self):
+        """
+        An athlete sees only their own program assignments.
+        """
+        team = Team.objects.create(name='Test Team', created_by=self.coach)
+        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
+        TeamMembership.objects.create(
+            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+        )
+
+        self.authenticate(self.coach)
+        self.client.post(
+            reverse('program-assignment-list'),
+            {
+                'template': self.template.pk,
+                'team': team.pk,
+                'start_date': '2026-11-10',
+                'end_date': '2026-12-10',
+            },
+            format='json',
+        )
+
+        self.authenticate(self.athlete1)
+        response = self.client.get(reverse('program-assignment-list'), format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ids = {a['id'] for a in response.data.get('results', response.data)}
+        self.assertGreaterEqual(len(ids), 1)
+
+    # --- Hardening: athlete write access ---
+
+    def test_athlete_cannot_write_team(self):
+        """
+        An athlete who is a member (not coach) cannot modify a team.
+        """
+        team = Team.objects.create(name='Test Team', created_by=self.coach)
+        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
+        TeamMembership.objects.create(
+            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+        )
+
+        self.authenticate(self.athlete1)
+        response = self.client.put(
+            reverse('team-detail', kwargs={'pk': team.pk}),
+            {'name': 'Hacked'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_athlete_cannot_write_membership(self):
+        """
+        An athlete cannot create a membership for a team they do not coach.
+        """
+        team = Team.objects.create(name='Test Team', created_by=self.coach)
+        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
+
+        self.authenticate(self.athlete1)
+        response = self.client.post(
+            reverse('team-membership-list'),
+            {
+                'team': team.pk,
+                'user': self.athlete2.pk,
+                'role': TeamMembership.Role.ATHLETE,
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    # --- Hardening: foreign coach sees no assignment ---
+
+    def test_foreign_coach_sees_no_assignment(self):
+        """
+        A coach of another team gets 404 for a foreign assignment.
+        """
+        team = Team.objects.create(name='Test Team', created_by=self.coach)
+        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
+        TeamMembership.objects.create(
+            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+        )
+
+        self.authenticate(self.coach)
+        response = self.client.post(
+            reverse('program-assignment-list'),
+            {
+                'template': self.template.pk,
+                'team': team.pk,
+                'start_date': '2026-11-10',
+                'end_date': '2026-12-10',
+            },
+            format='json',
+        )
+        assignment_id = response.data['id']
+
+        other_team = Team.objects.create(name='Other Team', created_by=self.other_coach)
+        TeamMembership.objects.create(
+            team=other_team, user=self.other_coach, role=TeamMembership.Role.COACH
+        )
+
+        self.authenticate(self.other_coach)
+        response = self.client.get(
+            reverse('program-assignment-detail', kwargs={'pk': assignment_id})
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    # --- Hardening: template deletion keeps assignment ---
+
+    def test_delete_template_keeps_assignment(self):
+        """
+        Deleting the template keeps the assignment and copies; template is NULL.
+        """
+        team = Team.objects.create(name='Test Team', created_by=self.coach)
+        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
+        TeamMembership.objects.create(
+            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+        )
+
+        self.authenticate(self.coach)
+        response = self.client.post(
+            reverse('program-assignment-list'),
+            {
+                'template': self.template.pk,
+                'team': team.pk,
+                'start_date': '2026-11-10',
+                'end_date': '2026-12-10',
+            },
+            format='json',
+        )
+        assignment_id = response.data['id']
+        assignment = ProgramAssignment.objects.get(pk=assignment_id)
+        self.assertIsNotNone(assignment.template)
+
+        self.template.delete()
+
+        assignment.refresh_from_db()
+        self.assertIsNone(assignment.template)
+        self.assertEqual(AssignedRoutine.objects.filter(assignment=assignment).count(), 1)

@@ -46,6 +46,13 @@ class TeamMembershipSerializer(serializers.ModelSerializer):
         model = TeamMembership
         fields = ('id', 'team', 'user', 'role')
 
+    def validate(self, attrs):
+        if self.instance is not None:
+            for field in ('team', 'user'):
+                if field in attrs and attrs[field] != getattr(self.instance, field):
+                    raise serializers.ValidationError({field: 'This field cannot be changed.'})
+        return attrs
+
 
 class ProgramAssignmentSerializer(serializers.ModelSerializer):
     """
