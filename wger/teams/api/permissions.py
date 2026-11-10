@@ -18,7 +18,11 @@
 from rest_framework import permissions
 
 # wger
-from wger.teams.models import Team, TeamMembership
+from wger.teams.models import (
+    Team,
+    TeamGroup,
+    TeamMembership,
+)
 
 
 def is_assignment_coach(user, assignment) -> bool:
@@ -48,7 +52,7 @@ class IsTeamCoach(permissions.BasePermission):
     Allows access to members of a team for safe methods, and to active coaches
     for write methods. Invited users can read, so they see what they are invited to.
 
-    Used for Team and TeamMembership objects. Foreign objects yield 404
+    Used for Team, TeamMembership and TeamGroup objects. Foreign objects yield 404
     (via queryset filtering), not 403, so their existence is not leaked.
     """
 
@@ -58,12 +62,16 @@ class IsTeamCoach(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         if isinstance(obj, Team):
             team = obj
-        elif isinstance(obj, TeamMembership):
+        elif isinstance(obj, (TeamMembership, TeamGroup)):
             team = obj.team
         else:
             return False
 
         if request.method in permissions.SAFE_METHODS:
+            # The queryset decides who sees a group
+            if isinstance(obj, TeamGroup):
+                return True
+
             # Any member can read
             return TeamMembership.objects.filter(team=team, user=request.user).exists()
 

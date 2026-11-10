@@ -41,12 +41,14 @@ from wger.teams.api.permissions import (
 from wger.teams.api.serializers import (
     AssignmentProgressSerializer,
     ProgramAssignmentSerializer,
+    TeamGroupSerializer,
     TeamMembershipSerializer,
     TeamSerializer,
 )
 from wger.teams.models import (
     ProgramAssignment,
     Team,
+    TeamGroup,
     TeamMembership,
 )
 from wger.teams.services import (
@@ -190,6 +192,47 @@ class TeamMembershipViewSet(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class TeamGroupViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for the groups of a team.
+
+    Coaches of the team manage its groups. Members of a group can read it.
+    """
+
+    serializer_class = TeamGroupSerializer
+    permission_classes = [IsTeamCoach]
+    ordering_fields = '__all__'
+    filterset_fields = ('team', 'name')
+    http_method_names = ['get', 'post', 'put', 'patch', 'delete']
+
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return TeamGroup.objects.none()
+
+        user = self.request.user
+        return TeamGroup.objects.filter(
+            models.Q(
+                team__memberships__user=user,
+                team__memberships__role=TeamMembership.Role.COACH,
+                team__memberships__status=TeamMembership.Status.ACTIVE,
+            )
+            | models.Q(
+                members__user=user,
+                members__status=TeamMembership.Status.ACTIVE,
+            )
+        ).distinct()
+
+    def perform_create(self, serializer):
+        if not TeamMembership.objects.filter(
+            team=serializer.validated_data.get('team'),
+            user=self.request.user,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        ).exists():
+            raise exceptions.PermissionDenied('Only a coach of this team can add groups.')
+        serializer.save()
+
+
 class ProgramAssignmentViewSet(viewsets.ModelViewSet):
     """
     API endpoint for program assignment objects.
@@ -203,7 +246,7 @@ class ProgramAssignmentViewSet(viewsets.ModelViewSet):
     serializer_class = ProgramAssignmentSerializer
     permission_classes = [IsAssignmentCoach]
     ordering_fields = '__all__'
-    filterset_fields = ('template', 'team', 'athlete', 'assigned_by')
+    filterset_fields = ('template', 'team', 'group', 'athlete', 'assigned_by')
     http_method_names = ['get', 'post']
 
     def get_queryset(self):
@@ -212,8 +255,8 @@ class ProgramAssignmentViewSet(viewsets.ModelViewSet):
 
         user = self.request.user
 
-        # Active members see the assignments of their teams. Assignments to a
-        # single athlete are visible to that athlete and to their coaches.
+        # Athletes see the assignments they received a copy of, coaches the ones
+        # of their teams and the ones made to a single athlete they coach.
         coached_athletes = TeamMembership.objects.filter(
             role=TeamMembership.Role.ATHLETE,
             status=TeamMembership.Status.ACTIVE,
@@ -226,9 +269,11 @@ class ProgramAssignmentViewSet(viewsets.ModelViewSet):
 
         return ProgramAssignment.objects.filter(
             models.Q(athlete=user)
+            | models.Q(assigned_routines__athlete=user)
             | models.Q(athlete__in=coached_athletes)
             | models.Q(
                 team__memberships__user=user,
+                team__memberships__role=TeamMembership.Role.COACH,
                 team__memberships__status=TeamMembership.Status.ACTIVE,
             )
         ).distinct()

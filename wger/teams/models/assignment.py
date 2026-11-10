@@ -20,13 +20,15 @@ from django.db import models
 
 # wger
 from wger.manager.models import Routine
+from wger.teams.models.group import TeamGroup
 from wger.teams.models.team import Team
 
 
 class ProgramAssignment(models.Model):
     """
-    An assignment of a routine template to either a team or a single athlete.
-    Exactly one of team or athlete is set.
+    An assignment of a routine template to a team, a group of a team or a single
+    athlete. Exactly one of team or athlete is set, a group assignment has the
+    team of the group and the group.
     """
 
     class Meta:
@@ -37,6 +39,10 @@ class ProgramAssignment(models.Model):
                     | models.Q(team__isnull=True, athlete__isnull=False)
                 ),
                 name='assignment_exactly_one_target',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(group__isnull=True) | models.Q(team__isnull=False),
+                name='assignment_group_needs_team',
             ),
         ]
 
@@ -57,6 +63,16 @@ class ProgramAssignment(models.Model):
         blank=True,
         default=None,
     )
+
+    group = models.ForeignKey(
+        TeamGroup,
+        verbose_name='Group',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        default=None,
+    )
+    """Empty for team assignments and once the group was deleted"""
 
     athlete = models.ForeignKey(
         User,

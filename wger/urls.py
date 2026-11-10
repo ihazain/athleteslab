@@ -46,8 +46,8 @@ from wger.gallery.api import views as gallery_api_views
 from wger.manager.api import views as manager_api_views
 from wger.measurements.api import views as measurements_api_views
 from wger.nutrition.api import views as nutrition_api_views
-from wger.trophies.api import views as trophies_api_views
 from wger.teams.api import views as teams_api_views
+from wger.trophies.api import views as trophies_api_views
 from wger.utils import oidc_auth
 from wger.utils.api_schema import CachedSchemaGenerator
 from wger.utils.generic_views import TextTemplateView
@@ -241,6 +241,7 @@ router.register(r'gallery', gallery_api_views.GalleryImageViewSet, basename='gal
 
 # Teams app
 router.register(r'team', teams_api_views.TeamViewSet, basename='team')
+router.register(r'team-group', teams_api_views.TeamGroupViewSet, basename='team-group')
 router.register(
     r'team-membership',
     teams_api_views.TeamMembershipViewSet,

@@ -41,6 +41,7 @@ from wger.teams.models import (
     AssignedRoutine,
     ProgramAssignment,
     Team,
+    TeamGroup,
     TeamMembership,
 )
 from wger.teams.services import assign_program, copy_routine
@@ -619,3 +620,84 @@ class AssignProgramTestCase(WgerTestCase):
         with self.assertRaises(PermissionDenied):
             self.assign(athlete=self.athlete2, assigned_by=self.other_coach, template=template)
         self.assertEqual(AssignedRoutine.objects.count(), 0)
+
+    def make_group(self, *users, team=None):
+        """
+        A group of the team with the memberships of the given users.
+        """
+        team = team or self.team
+        group = TeamGroup.objects.create(team=team, name='Goalkeepers')
+        group.members.set(TeamMembership.objects.filter(team=team, user__in=users))
+        return group
+
+    def test_assign_to_group(self):
+        """
+        A group assignment reaches the athletes of the group only and keeps the team.
+        """
+        group = self.make_group(self.athlete1, self.athlete3)
+
+        assignment = self.assign(group=group)
+
+        self.assertEqual(assignment.group, group)
+        self.assertEqual(assignment.team, self.team)
+        self.assertIsNone(assignment.athlete)
+        athletes = {a.athlete for a in AssignedRoutine.objects.filter(assignment=assignment)}
+        self.assertEqual(athletes, {self.athlete1, self.athlete3})
+        self.assertFalse(Routine.objects.filter(user=self.athlete2).exists())
+
+    def test_group_assignment_skips_invited_and_coaches(self):
+        """
+        Invited members and coaches in a group receive no copy.
+        """
+        pending = User.objects.create_user(username='pending', email='pending@example.com')
+        self.invite(pending)
+        group = self.make_group(self.athlete1, pending, self.coach)
+
+        assignment = self.assign(group=group)
+
+        athletes = {a.athlete for a in AssignedRoutine.objects.filter(assignment=assignment)}
+        self.assertEqual(athletes, {self.athlete1})
+
+    def test_assign_to_empty_group(self):
+        """
+        A group without active athletes raises ValidationError.
+        """
+        with self.assertRaises(ValidationError):
+            self.assign(group=self.make_group())
+        self.assertEqual(ProgramAssignment.objects.count(), 0)
+
+    def test_only_coach_of_the_team_assigns_to_group(self):
+        """
+        A coach of another team cannot assign to a group, even with an own template.
+        """
+        template = Routine.objects.create(
+            user=self.other_coach,
+            name='Other coach template',
+            is_template=True,
+            start=datetime.date(2026, 11, 1),
+            end=datetime.date(2026, 11, 30),
+        )
+        group = self.make_group(self.athlete1)
+
+        with self.assertRaises(PermissionDenied):
+            self.assign(group=group, assigned_by=self.other_coach, template=template)
+        self.assertEqual(AssignedRoutine.objects.count(), 0)
+
+    def test_group_is_an_exclusive_target(self):
+        """
+        A group cannot be combined with a team or an athlete.
+        """
+        group = self.make_group(self.athlete1)
+        with self.assertRaises(ValidationError):
+            self.assign(group=group, team=self.team)
+        with self.assertRaises(ValidationError):
+            self.assign(group=group, athlete=self.athlete1)
+        self.assertEqual(ProgramAssignment.objects.count(), 0)
+
+    def test_group_assignment_counts_for_overlap(self):
+        """
+        After a group assignment the team cannot get the same template for the same period.
+        """
+        self.assign(group=self.make_group(self.athlete1))
+        with self.assertRaises(ValidationError):
+            self.assign(team=self.team)

@@ -111,19 +111,31 @@ def _can_use_template(user, template):
     return template.user_id == user.pk or (template.is_template and template.is_public)
 
 
-def assign_program(*, template, assigned_by, start_date, end_date, team=None, athlete=None):
+def assign_program(
+    *,
+    template,
+    assigned_by,
+    start_date,
+    end_date,
+    team=None,
+    group=None,
+    athlete=None,
+):
     """
     Assign a routine template to one or more athletes.
 
-    Exactly one of ``team`` or ``athlete`` must be given. ``assigned_by`` must
-    be a coach of the target team (or a coach sharing a team with the target
-    athlete). The whole assignment runs in a single transaction so it never
-    ends up half-assigned.
+    Exactly one of ``team``, ``group`` or ``athlete`` must be given.
+    ``assigned_by`` must be a coach of the target team, of the team of the
+    group, or a coach sharing a team with the target athlete. The whole
+    assignment runs in a single transaction so it never ends up half-assigned.
 
     Returns the created ``ProgramAssignment`` instance.
     """
-    if (team is None) == (athlete is None):
-        raise ValidationError('Exactly one of team or athlete must be set.')
+    if sum(target is not None for target in (team, group, athlete)) != 1:
+        raise ValidationError('Exactly one of team, group or athlete must be set.')
+
+    if group is not None:
+        team = group.team
 
     if start_date > end_date:
         raise ValidationError('start_date must not be after end_date.')
@@ -141,10 +153,10 @@ def assign_program(*, template, assigned_by, start_date, end_date, team=None, at
                 status=TeamMembership.Status.ACTIVE,
             ).exists():
                 raise PermissionDenied('assigned_by is not a coach of this team.')
+            memberships = group.members.all() if group is not None else team.memberships.all()
             athletes = [
                 membership.user
-                for membership in TeamMembership.objects.filter(
-                    team=team,
+                for membership in memberships.filter(
                     role=TeamMembership.Role.ATHLETE,
                     status=TeamMembership.Status.ACTIVE,
                 ).select_related('user')
@@ -183,6 +195,7 @@ def assign_program(*, template, assigned_by, start_date, end_date, team=None, at
         assignment = ProgramAssignment.objects.create(
             template=template,
             team=team,
+            group=group,
             athlete=athlete,
             start_date=start_date,
             end_date=end_date,

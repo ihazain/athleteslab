@@ -7,15 +7,21 @@
 
 ### Teams (beta)
 A new `wger.teams` app lets coaches create teams, invite athletes and coaches
-as members, and assign routine templates to either a whole team or a single
-athlete. Each assignment creates a private snapshot copy of the template per
+as members, and assign routine templates to a whole team, a group of a team
+or a single athlete. Each assignment creates a private snapshot copy of the template per
 athlete, so later changes to the template never affect existing plans. The
 backend and REST API (`/api/v2/team/`, `/api/v2/team-membership/`,
-`/api/v2/program-assignment/`) are complete; frontend support follows later.
+`/api/v2/team-group/`, `/api/v2/program-assignment/`) are complete; frontend
+support follows later.
 
 * A new membership is an invitation (`status: invited`). Only the invited user
   can answer it with `team-membership/{id}/accept/` or `.../decline/`. Invited
   members receive no copies and have no coach rights until they accept.
+* Groups (`team-group/`) are sub-sets of the members of a team, e.g. the
+  goalkeepers. An assignment with `group` reaches only the active athletes of
+  that group and is returned with the `team` of the group as well.
+* Athletes only see the assignments they received a copy of, coaches all
+  assignments of their teams.
 * Assigning the same template to an athlete again for an overlapping period is
   rejected with a 400, a team assignment is rejected as a whole in that case.
 * Assignments to a single athlete are visible to the athlete and to their

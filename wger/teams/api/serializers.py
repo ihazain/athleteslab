@@ -22,6 +22,7 @@ from wger.teams.models import (
     AssignedRoutine,
     ProgramAssignment,
     Team,
+    TeamGroup,
     TeamMembership,
 )
 
@@ -55,12 +56,34 @@ class TeamMembershipSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class TeamGroupSerializer(serializers.ModelSerializer):
+    """
+    Serializer for TeamGroup objects. The members are memberships of the team.
+    """
+
+    class Meta:
+        model = TeamGroup
+        fields = ('id', 'team', 'name', 'members')
+
+    def validate(self, attrs):
+        team = attrs.get('team', getattr(self.instance, 'team', None))
+        if self.instance is not None and team != self.instance.team:
+            raise serializers.ValidationError({'team': 'This field cannot be changed.'})
+
+        if any(membership.team_id != team.pk for membership in attrs.get('members', [])):
+            raise serializers.ValidationError(
+                {'members': 'All members must belong to the team of the group.'}
+            )
+        return attrs
+
+
 class ProgramAssignmentSerializer(serializers.ModelSerializer):
     """
     Serializer for ProgramAssignment objects.
 
-    The ``team`` and ``athlete`` fields are mutually exclusive: exactly one
-    must be set. The actual assignment logic (deep copy, transaction, audit
+    The ``team``, ``group`` and ``athlete`` fields are mutually exclusive when
+    writing: exactly one must be set. A group assignment is returned with the
+    team of the group as well. The actual assignment logic (deep copy, transaction, audit
     log) lives in ``wger.teams.services.assign_program``; this serializer only
     validates the input and delegates to it.
     """
@@ -71,6 +94,7 @@ class ProgramAssignmentSerializer(serializers.ModelSerializer):
             'id',
             'template',
             'team',
+            'group',
             'athlete',
             'start_date',
             'end_date',
@@ -81,11 +105,9 @@ class ProgramAssignmentSerializer(serializers.ModelSerializer):
         read_only_fields = ('assigned_by', 'created', 'archived_at')
 
     def validate(self, attrs):
-        team = attrs.get('team')
-        athlete = attrs.get('athlete')
-
-        if (team is None) == (athlete is None):
-            raise serializers.ValidationError('Exactly one of team or athlete must be set.')
+        targets = [attrs.get(field) for field in ('team', 'group', 'athlete')]
+        if sum(target is not None for target in targets) != 1:
+            raise serializers.ValidationError('Exactly one of team, group or athlete must be set.')
 
         if attrs.get('start_date') > attrs.get('end_date'):
             raise serializers.ValidationError('start_date must not be after end_date.')
@@ -106,6 +128,7 @@ class ProgramAssignmentSerializer(serializers.ModelSerializer):
             start_date=validated_data['start_date'],
             end_date=validated_data['end_date'],
             team=validated_data.get('team'),
+            group=validated_data.get('group'),
             athlete=validated_data.get('athlete'),
         )
 

@@ -17,5 +17,6 @@
 # Local
 from .assigned_routine import AssignedRoutine
 from .assignment import ProgramAssignment
+from .group import TeamGroup
 from .membership import TeamMembership
 from .team import Team

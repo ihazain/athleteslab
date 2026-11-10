@@ -47,6 +47,7 @@ from wger.teams.models import (
     AssignedRoutine,
     ProgramAssignment,
     Team,
+    TeamGroup,
     TeamMembership,
 )
 
@@ -1488,3 +1489,176 @@ class TeamApiTestCase(WgerTestCase):
         self.assertEqual(self.client.get(progress).status_code, status.HTTP_403_FORBIDDEN)
         self.authenticate(self.other_coach)
         self.assertEqual(self.client.get(progress).status_code, status.HTTP_404_NOT_FOUND)
+
+    # --- Groups ---
+
+    def make_group(self, team, *users):
+        group = TeamGroup.objects.create(team=team, name='Goalkeepers')
+        group.members.set(TeamMembership.objects.filter(team=team, user__in=users))
+        return group
+
+    def test_coach_manages_group(self):
+        """
+        A coach creates a group with members of the team, changes and deletes it.
+        """
+        team = self.make_team_with_athletes()
+        membership1 = TeamMembership.objects.get(team=team, user=self.athlete1)
+        membership2 = TeamMembership.objects.get(team=team, user=self.athlete2)
+
+        self.authenticate(self.coach)
+        response = self.client.post(
+            reverse('team-group-list'),
+            {'team': team.pk, 'name': 'Goalkeepers', 'members': [membership1.pk]},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        group = TeamGroup.objects.get(pk=response.data['id'])
+        self.assertEqual(list(group.members.all()), [membership1])
+
+        detail = reverse('team-group-detail', kwargs={'pk': group.pk})
+        response = self.client.patch(
+            detail, {'members': [membership1.pk, membership2.pk]}, format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(group.members.count(), 2)
+
+        response = self.client.delete(detail)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertTrue(TeamMembership.objects.filter(pk=membership1.pk).exists())
+
+    def test_group_members_must_belong_to_the_team(self):
+        """
+        A membership of another team cannot be put into a group, the team cannot change.
+        """
+        team = self.make_team_with_athletes()
+        other_team = Team.objects.create(name='Other Team', created_by=self.coach)
+        TeamMembership.objects.create(
+            team=other_team,
+            user=self.coach,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
+        foreign = TeamMembership.objects.create(
+            team=other_team,
+            user=self.athlete1,
+            role=TeamMembership.Role.ATHLETE,
+            status=TeamMembership.Status.ACTIVE,
+        )
+
+        self.authenticate(self.coach)
+        response = self.client.post(
+            reverse('team-group-list'),
+            {'team': team.pk, 'name': 'Goalkeepers', 'members': [foreign.pk]},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(TeamGroup.objects.exists())
+
+        group = self.make_group(team, self.athlete1)
+        detail = reverse('team-group-detail', kwargs={'pk': group.pk})
+        response = self.client.patch(detail, {'members': [foreign.pk]}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.patch(detail, {'team': other_team.pk}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        group.refresh_from_db()
+        self.assertEqual(group.team, team)
+        self.assertEqual([m.user for m in group.members.all()], [self.athlete1])
+
+    def test_group_access(self):
+        """
+        Coaches of the team and the members of a group can read it, only coaches write.
+        Athletes outside the group and foreign users get 404.
+        """
+        team = self.make_team_with_athletes()
+        group = self.make_group(team, self.athlete1)
+        detail = reverse('team-group-detail', kwargs={'pk': group.pk})
+
+        for user, expected in (
+            (self.coach, status.HTTP_200_OK),
+            (self.athlete1, status.HTTP_200_OK),
+            (self.athlete2, status.HTTP_404_NOT_FOUND),
+            (self.other_coach, status.HTTP_404_NOT_FOUND),
+        ):
+            self.authenticate(user)
+            self.assertEqual(self.client.get(detail).status_code, expected, user)
+
+        self.authenticate(self.athlete1)
+        response = self.client.patch(detail, {'name': 'Mine'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self.client.delete(detail).status_code, status.HTTP_403_FORBIDDEN)
+        response = self.client.post(
+            reverse('team-group-list'), {'team': team.pk, 'name': 'New'}, format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.authenticate(self.other_coach)
+        response = self.client.post(
+            reverse('team-group-list'), {'team': team.pk, 'name': 'New'}, format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(TeamGroup.objects.count(), 1)
+
+    def test_assign_to_group(self):
+        """
+        A group assignment creates copies for the group only. Athletes of the team outside
+        the group do not see it, deleting the group keeps assignment and copies.
+        """
+        team = self.make_team_with_athletes()
+        group = self.make_group(team, self.athlete1)
+
+        self.authenticate(self.coach)
+        response = self.client.post(
+            reverse('program-assignment-list'),
+            {
+                'template': self.template.pk,
+                'group': group.pk,
+                'start_date': '2026-11-10',
+                'end_date': '2026-12-10',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['group'], group.pk)
+        self.assertEqual(response.data['team'], team.pk)
+        assignment_id = response.data['id']
+        detail = reverse('program-assignment-detail', kwargs={'pk': assignment_id})
+
+        copies = AssignedRoutine.objects.filter(assignment_id=assignment_id)
+        self.assertEqual([c.athlete for c in copies], [self.athlete1])
+
+        for user, expected in (
+            (self.coach, status.HTTP_200_OK),
+            (self.athlete1, status.HTTP_200_OK),
+            (self.athlete2, status.HTTP_404_NOT_FOUND),
+        ):
+            self.authenticate(user)
+            self.assertEqual(self.client.get(detail).status_code, expected, user)
+
+        group.delete()
+        assignment = ProgramAssignment.objects.get(pk=assignment_id)
+        self.assertIsNone(assignment.group)
+        self.assertEqual(assignment.team, team)
+        self.assertEqual(copies.count(), 1)
+
+    def test_assign_to_group_and_team(self):
+        """
+        More than one target in the payload returns 400.
+        """
+        team = self.make_team_with_athletes()
+        group = self.make_group(team, self.athlete1)
+
+        self.authenticate(self.coach)
+        response = self.client.post(
+            reverse('program-assignment-list'),
+            {
+                'template': self.template.pk,
+                'group': group.pk,
+                'team': team.pk,
+                'start_date': '2026-11-10',
+                'end_date': '2026-12-10',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(ProgramAssignment.objects.count(), 0)
