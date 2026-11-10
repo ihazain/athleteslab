@@ -5,6 +5,14 @@
 
 ## New features
 
+### Teams (beta)
+A new `wger.teams` app lets coaches create teams, add athletes and coaches as
+members, and assign routine templates to either a whole team or a single
+athlete. Each assignment creates a private snapshot copy of the template per
+athlete, so later changes to the template never affect existing plans. The
+backend and REST API (`/api/v2/team/`, `/api/v2/team-membership/`,
+`/api/v2/program-assignment/`) are complete; frontend support follows later.
+
 ### Double progression
 Progression requirements can now reference the top of the prescribed range via the new rules `max_repetitions` and `max_weight`, and the new `all_sets` flag requires every prescribed set to qualify. Together they enable classic double progression schemes ("work from 8 to 12 reps at a fixed weight, add weight only once all sets reach 12"), e.g. `{"rules": ["max_repetitions"], "all_sets": true}`.
 

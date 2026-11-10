@@ -47,6 +47,7 @@ from wger.manager.api import views as manager_api_views
 from wger.measurements.api import views as measurements_api_views
 from wger.nutrition.api import views as nutrition_api_views
 from wger.trophies.api import views as trophies_api_views
+from wger.teams.api import views as teams_api_views
 from wger.utils import oidc_auth
 from wger.utils.api_schema import CachedSchemaGenerator
 from wger.utils.generic_views import TextTemplateView
@@ -237,6 +238,19 @@ router.register(r'weightentry', weight_api_views.WeightEntryViewSet, basename='w
 
 # Gallery app
 router.register(r'gallery', gallery_api_views.GalleryImageViewSet, basename='gallery')
+
+# Teams app
+router.register(r'team', teams_api_views.TeamViewSet, basename='team')
+router.register(
+    r'team-membership',
+    teams_api_views.TeamMembershipViewSet,
+    basename='team-membership',
+)
+router.register(
+    r'program-assignment',
+    teams_api_views.ProgramAssignmentViewSet,
+    basename='program-assignment',
+)
 
 # Measurements app
 router.register(
