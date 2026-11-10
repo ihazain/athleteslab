@@ -157,6 +157,19 @@ def assign_program(*, template, assigned_by, start_date, end_date, team=None, at
         if not athletes:
             raise ValidationError('No athletes found for the given target.')
 
+        # The same template may not run twice for an athlete in overlapping periods
+        overlapping = AssignedRoutine.objects.filter(
+            athlete__in=athletes,
+            assignment__template=template,
+            assignment__start_date__lte=end_date,
+            assignment__end_date__gte=start_date,
+        ).select_related('athlete')
+        if overlapping:
+            names = ', '.join(sorted({assigned.athlete.username for assigned in overlapping}))
+            raise ValidationError(
+                f'This template is already assigned for an overlapping period to: {names}'
+            )
+
         assignment = ProgramAssignment.objects.create(
             template=template,
             team=team,

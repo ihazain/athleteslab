@@ -9,7 +9,9 @@
 A new `wger.teams` app lets coaches create teams, add athletes and coaches as
 members, and assign routine templates to either a whole team or a single
 athlete. Each assignment creates a private snapshot copy of the template per
-athlete, so later changes to the template never affect existing plans. The
+athlete, so later changes to the template never affect existing plans.
+Assigning the same template to an athlete again for an overlapping period is
+rejected with a 400, a team assignment is rejected as a whole in that case. The
 backend and REST API (`/api/v2/team/`, `/api/v2/team-membership/`,
 `/api/v2/program-assignment/`) are complete; frontend support follows later.
 

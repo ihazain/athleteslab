@@ -282,6 +282,73 @@ class TeamApiTestCase(WgerTestCase):
         athletes = {c.athlete for c in copies}
         self.assertEqual(athletes, {self.athlete1, self.athlete2})
 
+    def test_overlapping_assignment(self):
+        """
+        Assigning the same template to the same athlete for an overlapping period returns 400.
+        """
+        team = Team.objects.create(name='Test Team', created_by=self.coach)
+        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
+        TeamMembership.objects.create(
+            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+        )
+
+        self.authenticate(self.coach)
+        payload = {
+            'template': self.template.pk,
+            'athlete': self.athlete1.pk,
+            'start_date': '2026-11-10',
+            'end_date': '2026-12-10',
+        }
+        response = self.client.post(reverse('program-assignment-list'), payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        payload.update({'start_date': '2026-12-10', 'end_date': '2026-12-31'})
+        response = self.client.post(reverse('program-assignment-list'), payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(AssignedRoutine.objects.filter(athlete=self.athlete1).count(), 1)
+
+        payload.update({'start_date': '2026-12-11', 'end_date': '2026-12-31'})
+        response = self.client.post(reverse('program-assignment-list'), payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_private_template_stays_hidden_from_athlete(self):
+        """
+        A private template can be assigned, the athlete gets the copy but never sees the template.
+        """
+        self.assertFalse(self.template.is_public)
+        team = Team.objects.create(name='Test Team', created_by=self.coach)
+        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
+        TeamMembership.objects.create(
+            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+        )
+
+        self.authenticate(self.coach)
+        response = self.client.post(
+            reverse('program-assignment-list'),
+            {
+                'template': self.template.pk,
+                'team': team.pk,
+                'start_date': '2026-11-10',
+                'end_date': '2026-12-10',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        copy = AssignedRoutine.objects.get(athlete=self.athlete1).routine
+
+        self.authenticate(self.athlete1)
+        response = self.client.get(reverse('routine-detail', kwargs={'pk': self.template.pk}))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        response = self.client.get(reverse('routine-detail', kwargs={'pk': copy.pk}))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        for name in ('routine-list', 'templates-list', 'public-templates-list'):
+            response = self.client.get(reverse(name), {'limit': 1000})
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            ids = {r['id'] for r in response.data['results']}
+            self.assertNotIn(self.template.pk, ids, name)
+
     def test_athlete_cannot_assign(self):
         """
         An athlete cannot assign a program.

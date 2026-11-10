@@ -421,3 +421,118 @@ class AssignProgramTestCase(WgerTestCase):
 
         self.assertEqual(ProgramAssignment.objects.count(), assignment_count)
         self.assertEqual(AssignedRoutine.objects.count(), assigned_count)
+
+    def assign(self, **kwargs):
+        """
+        Assigns the template with the default period, overridable per call.
+        """
+        params = {
+            'template': self.template,
+            'assigned_by': self.coach,
+            'start_date': self.start_date,
+            'end_date': self.end_date,
+        }
+        params.update(kwargs)
+        return assign_program(**params)
+
+    def test_overlapping_assignment_same_athlete(self):
+        """
+        The same template cannot be assigned twice to an athlete for overlapping periods.
+        """
+        self.assign(athlete=self.athlete1)
+        assignment_count = ProgramAssignment.objects.count()
+        assigned_count = AssignedRoutine.objects.count()
+        routine_count = Routine.objects.count()
+
+        with self.assertRaises(ValidationError):
+            self.assign(
+                athlete=self.athlete1,
+                start_date=datetime.date(2026, 12, 1),
+                end_date=datetime.date(2026, 12, 31),
+            )
+
+        self.assertEqual(ProgramAssignment.objects.count(), assignment_count)
+        self.assertEqual(AssignedRoutine.objects.count(), assigned_count)
+        self.assertEqual(Routine.objects.count(), routine_count)
+
+    def test_overlap_boundary_days(self):
+        """
+        A period starting on the last day of an existing one overlaps, the day after does not.
+        """
+        self.assign(athlete=self.athlete1)
+
+        with self.assertRaises(ValidationError):
+            self.assign(
+                athlete=self.athlete1,
+                start_date=self.end_date,
+                end_date=self.end_date + datetime.timedelta(days=30),
+            )
+
+        # Ending on the first day of the existing period overlaps as well
+        with self.assertRaises(ValidationError):
+            self.assign(
+                athlete=self.athlete1,
+                start_date=self.start_date - datetime.timedelta(days=30),
+                end_date=self.start_date,
+            )
+
+        after = self.assign(
+            athlete=self.athlete1,
+            start_date=self.end_date + datetime.timedelta(days=1),
+            end_date=self.end_date + datetime.timedelta(days=30),
+        )
+        before = self.assign(
+            athlete=self.athlete1,
+            start_date=self.start_date - datetime.timedelta(days=30),
+            end_date=self.start_date - datetime.timedelta(days=1),
+        )
+        self.assertEqual(AssignedRoutine.objects.filter(assignment__in=[after, before]).count(), 2)
+
+    def test_overlap_other_template_allowed(self):
+        """
+        A different template can be assigned to the same athlete for the same period.
+        """
+        other_template = Routine.objects.create(
+            user=self.coach,
+            name='Other template',
+            is_template=True,
+            start=datetime.date(2026, 11, 1),
+            end=datetime.date(2026, 11, 30),
+        )
+        self.assign(athlete=self.athlete1)
+        assignment = self.assign(athlete=self.athlete1, template=other_template)
+
+        self.assertEqual(AssignedRoutine.objects.filter(assignment=assignment).count(), 1)
+
+    def test_overlap_other_athlete_allowed(self):
+        """
+        The same template and period can be assigned to another athlete.
+        """
+        self.assign(athlete=self.athlete1)
+        assignment = self.assign(athlete=self.athlete2)
+
+        self.assertEqual(AssignedRoutine.objects.filter(assignment=assignment).count(), 1)
+
+    def test_team_assignment_overlaps_individual_one(self):
+        """
+        A team assignment is rejected as a whole if one athlete already has the template.
+        """
+        self.assign(athlete=self.athlete2)
+        assignment_count = ProgramAssignment.objects.count()
+        assigned_count = AssignedRoutine.objects.count()
+
+        with self.assertRaises(ValidationError) as context:
+            self.assign(team=self.team)
+
+        self.assertIn(self.athlete2.username, context.exception.messages[0])
+        self.assertEqual(ProgramAssignment.objects.count(), assignment_count)
+        self.assertEqual(AssignedRoutine.objects.count(), assigned_count)
+
+    def test_individual_assignment_overlaps_team_one(self):
+        """
+        An athlete who got the template through a team cannot get it again individually.
+        """
+        self.assign(team=self.team)
+
+        with self.assertRaises(ValidationError):
+            self.assign(athlete=self.athlete1)
