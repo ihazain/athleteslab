@@ -20,6 +20,7 @@ import datetime
 # Django
 from django.contrib.auth.models import User
 from django.urls import reverse
+from django.utils import timezone
 
 # Third Party
 from rest_framework import status
@@ -39,6 +40,7 @@ from wger.manager.models import (
     Slot,
     SlotEntry,
     WeightConfig,
+    WorkoutLog,
 )
 from wger.teams.models import (
     AssignedRoutine,
@@ -694,3 +696,110 @@ class TeamApiTestCase(WgerTestCase):
         assignment.refresh_from_db()
         self.assertIsNone(assignment.template)
         self.assertEqual(AssignedRoutine.objects.filter(assignment=assignment).count(), 1)
+
+    # --- Deletion ---
+
+    def test_delete_team_keeps_copies_and_logs(self):
+        """
+        Deleting a team removes its assignments, the athletes keep their copies and logs.
+        """
+        team = Team.objects.create(name='Test Team', created_by=self.coach)
+        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
+        TeamMembership.objects.create(
+            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+        )
+
+        self.authenticate(self.coach)
+        response = self.client.post(
+            reverse('program-assignment-list'),
+            {
+                'template': self.template.pk,
+                'team': team.pk,
+                'start_date': '2026-11-10',
+                'end_date': '2026-12-10',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        assignment_id = response.data['id']
+        copy = AssignedRoutine.objects.get(athlete=self.athlete1).routine
+        log = WorkoutLog.objects.create(
+            user=self.athlete1,
+            routine=copy,
+            exercise_id=1,
+            weight=10,
+            repetitions=10,
+            date=timezone.now(),
+        )
+
+        response = self.client.delete(reverse('team-detail', kwargs={'pk': team.pk}))
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        self.assertFalse(Team.objects.filter(pk=team.pk).exists())
+        self.assertFalse(ProgramAssignment.objects.filter(pk=assignment_id).exists())
+        self.assertFalse(AssignedRoutine.objects.filter(athlete=self.athlete1).exists())
+
+        copy.refresh_from_db()
+        self.assertEqual(copy.user, self.athlete1)
+        self.assertEqual(copy.days.count(), self.template.days.count())
+        log.refresh_from_db()
+        self.assertEqual(log.routine, copy)
+        self.assertTrue(Routine.objects.filter(pk=self.template.pk).exists())
+
+    def test_athlete_cannot_delete_team(self):
+        """
+        An athlete cannot delete a team.
+        """
+        team = Team.objects.create(name='Test Team', created_by=self.coach)
+        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
+        TeamMembership.objects.create(
+            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+        )
+
+        self.authenticate(self.athlete1)
+        response = self.client.delete(reverse('team-detail', kwargs={'pk': team.pk}))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(Team.objects.filter(pk=team.pk).exists())
+
+    def test_delete_coach_account_keeps_team_and_assignment(self):
+        """
+        Deleting the account of the coach keeps the team, the assignment and the copies.
+        """
+        team = Team.objects.create(name='Test Team', created_by=self.coach)
+        TeamMembership.objects.create(team=team, user=self.coach, role=TeamMembership.Role.COACH)
+        TeamMembership.objects.create(
+            team=team, user=self.other_coach, role=TeamMembership.Role.COACH
+        )
+        TeamMembership.objects.create(
+            team=team, user=self.athlete1, role=TeamMembership.Role.ATHLETE
+        )
+
+        self.authenticate(self.coach)
+        response = self.client.post(
+            reverse('program-assignment-list'),
+            {
+                'template': self.template.pk,
+                'team': team.pk,
+                'start_date': '2026-11-10',
+                'end_date': '2026-12-10',
+            },
+            format='json',
+        )
+        assignment_id = response.data['id']
+        copy = AssignedRoutine.objects.get(athlete=self.athlete1).routine
+
+        self.coach.delete()
+
+        team.refresh_from_db()
+        self.assertIsNone(team.created_by)
+        assignment = ProgramAssignment.objects.get(pk=assignment_id)
+        self.assertIsNone(assignment.assigned_by)
+        self.assertIsNone(assignment.template)
+        self.assertTrue(Routine.objects.filter(pk=copy.pk).exists())
+
+        self.authenticate(self.other_coach)
+        response = self.client.get(
+            reverse('program-assignment-detail', kwargs={'pk': assignment_id})
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(response.data['assigned_by'])

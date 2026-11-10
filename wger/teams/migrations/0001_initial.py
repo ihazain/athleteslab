@@ -28,7 +28,8 @@ class Migration(migrations.Migration):
                 (
                     'created_by',
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.PROTECT,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
                         to=settings.AUTH_USER_MODEL,
                         verbose_name='Created by',
                     ),
@@ -53,7 +54,8 @@ class Migration(migrations.Migration):
                 (
                     'assigned_by',
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
                         related_name='assigned_programs',
                         to=settings.AUTH_USER_MODEL,
                         verbose_name='Assigned by',

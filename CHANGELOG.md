@@ -11,7 +11,10 @@ members, and assign routine templates to either a whole team or a single
 athlete. Each assignment creates a private snapshot copy of the template per
 athlete, so later changes to the template never affect existing plans.
 Assigning the same template to an athlete again for an overlapping period is
-rejected with a 400, a team assignment is rejected as a whole in that case. The
+rejected with a 400, a team assignment is rejected as a whole in that case.
+Deleting a team removes its assignments, the athletes keep their copies and
+logs. Deleting a coach account keeps teams and assignments, `created_by` and
+`assigned_by` are then `null`. The
 backend and REST API (`/api/v2/team/`, `/api/v2/team-membership/`,
 `/api/v2/program-assignment/`) are complete; frontend support follows later.
 

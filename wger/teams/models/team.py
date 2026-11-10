@@ -35,7 +35,8 @@ class Team(models.Model):
     created_by = models.ForeignKey(
         User,
         verbose_name='Created by',
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
+        null=True,
     )
 
     created = models.DateTimeField(

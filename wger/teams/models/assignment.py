@@ -79,7 +79,8 @@ class ProgramAssignment(models.Model):
     assigned_by = models.ForeignKey(
         User,
         verbose_name='Assigned by',
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
         related_name='assigned_programs',
     )
 
