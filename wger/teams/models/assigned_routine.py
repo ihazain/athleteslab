@@ -26,6 +26,7 @@ from wger.teams.models.assignment import ProgramAssignment
 class AssignedRoutine(models.Model):
     """
     The routine copy created for one athlete within one program assignment.
+    The routine is empty once the athlete deleted the copy.
     """
 
     class Meta:
@@ -52,7 +53,8 @@ class AssignedRoutine(models.Model):
     routine = models.OneToOneField(
         Routine,
         verbose_name='Routine copy',
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
     )
 
     def __str__(self):

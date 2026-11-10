@@ -76,8 +76,9 @@ class ProgramAssignmentSerializer(serializers.ModelSerializer):
             'end_date',
             'assigned_by',
             'created',
+            'archived_at',
         )
-        read_only_fields = ('assigned_by', 'created')
+        read_only_fields = ('assigned_by', 'created', 'archived_at')
 
     def validate(self, attrs):
         team = attrs.get('team')
@@ -118,3 +119,16 @@ class AssignedRoutineSerializer(serializers.ModelSerializer):
         model = AssignedRoutine
         fields = ('id', 'assignment', 'athlete', 'routine')
         read_only_fields = fields
+
+
+class AssignmentProgressSerializer(serializers.Serializer):
+    """
+    Progress of one athlete within an assignment (read-only).
+    """
+
+    athlete = serializers.IntegerField()
+    username = serializers.CharField()
+    routine = serializers.IntegerField(allow_null=True)
+    logs = serializers.IntegerField()
+    sessions = serializers.IntegerField()
+    last_activity = serializers.DateTimeField(allow_null=True)

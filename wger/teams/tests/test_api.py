@@ -21,6 +21,7 @@ import datetime
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 
 # Third Party
 from rest_framework import status
@@ -1310,3 +1311,180 @@ class TeamApiTestCase(WgerTestCase):
             reverse('program-assignment-detail', kwargs={'pk': assignment_id})
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    # --- Archiving ---
+
+    def make_team_with_athletes(self):
+        team = self.make_team()
+        for user in (self.athlete1, self.athlete2):
+            TeamMembership.objects.create(
+                team=team,
+                user=user,
+                role=TeamMembership.Role.ATHLETE,
+                status=TeamMembership.Status.ACTIVE,
+            )
+        return team
+
+    def test_archive_assignment(self):
+        """
+        An archived assignment stays readable and keeps its copies, archiving twice is an
+        error.
+        """
+        team = self.make_team_with_athletes()
+        self.authenticate(self.coach)
+        assignment_id = self.assign_to_team(team).data['id']
+        self.assertIsNone(ProgramAssignment.objects.get(pk=assignment_id).archived_at)
+        archive = reverse('program-assignment-archive', kwargs={'pk': assignment_id})
+        detail = reverse('program-assignment-detail', kwargs={'pk': assignment_id})
+
+        response = self.client.post(archive)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNotNone(response.data['archived_at'])
+        archived_at = ProgramAssignment.objects.get(pk=assignment_id).archived_at
+        self.assertIsNotNone(archived_at)
+
+        response = self.client.post(archive)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(ProgramAssignment.objects.get(pk=assignment_id).archived_at, archived_at)
+
+        copies = AssignedRoutine.objects.filter(assignment_id=assignment_id)
+        self.assertEqual(copies.count(), 2)
+        for copy in copies:
+            self.assertEqual(copy.routine.days.count(), self.template.days.count())
+
+        for user in (self.coach, self.athlete1):
+            self.authenticate(user)
+            response = self.client.get(detail)
+            self.assertEqual(response.status_code, status.HTTP_200_OK, user)
+            self.assertIsNotNone(response.data['archived_at'])
+
+    def test_only_coach_archives(self):
+        """
+        Athletes get 403 and foreign users 404 when archiving, nothing changes.
+        """
+        team = self.make_team_with_athletes()
+        self.authenticate(self.coach)
+        assignment_id = self.assign_to_team(team).data['id']
+        archive = reverse('program-assignment-archive', kwargs={'pk': assignment_id})
+
+        self.authenticate(self.athlete1)
+        self.assertEqual(self.client.post(archive).status_code, status.HTTP_403_FORBIDDEN)
+        self.authenticate(self.other_coach)
+        self.assertEqual(self.client.post(archive).status_code, status.HTTP_404_NOT_FOUND)
+
+        self.assertIsNone(ProgramAssignment.objects.get(pk=assignment_id).archived_at)
+
+    def test_archived_assignment_does_not_block_a_new_one(self):
+        """
+        After archiving, the same template can be assigned again for the same period.
+        """
+        team = self.make_team_with_athletes()
+        self.authenticate(self.coach)
+        assignment_id = self.assign_to_team(team).data['id']
+        self.assertEqual(self.assign_to_team(team).status_code, status.HTTP_400_BAD_REQUEST)
+
+        self.client.post(reverse('program-assignment-archive', kwargs={'pk': assignment_id}))
+        self.assertEqual(self.assign_to_team(team).status_code, status.HTTP_201_CREATED)
+        self.assertEqual(AssignedRoutine.objects.filter(athlete=self.athlete1).count(), 2)
+
+    # --- Progress ---
+
+    def make_log(self, user, routine, date):
+        return WorkoutLog.objects.create(
+            user=user,
+            routine=routine,
+            exercise_id=1,
+            weight=10,
+            repetitions=10,
+            date=date,
+        )
+
+    def test_progress(self):
+        """
+        The progress lists every athlete of the assignment with the copy and the activity
+        logged against that copy only.
+        """
+        team = self.make_team_with_athletes()
+        self.authenticate(self.coach)
+        assignment_id = self.assign_to_team(team).data['id']
+        progress = reverse('program-assignment-progress', kwargs={'pk': assignment_id})
+        copy1 = AssignedRoutine.objects.get(athlete=self.athlete1).routine
+        copy2 = AssignedRoutine.objects.get(athlete=self.athlete2).routine
+
+        first = datetime.datetime(2026, 11, 11, 18, 0, tzinfo=datetime.UTC)
+        last = datetime.datetime(2026, 11, 13, 18, 0, tzinfo=datetime.UTC)
+        self.make_log(self.athlete1, copy1, first)
+        self.make_log(self.athlete1, copy1, last)
+        self.make_log(self.athlete1, copy1, last)
+
+        # A log against another routine of the athlete does not count
+        own_routine = Routine.objects.create(
+            user=self.athlete2,
+            name='Own routine',
+            start=datetime.date(2026, 11, 1),
+            end=datetime.date(2026, 11, 30),
+        )
+        self.make_log(self.athlete2, own_routine, last)
+
+        response = self.client.get(progress)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        rows = {row['athlete']: row for row in response.data}
+        self.assertEqual(set(rows), {self.athlete1.pk, self.athlete2.pk})
+
+        row = rows[self.athlete1.pk]
+        self.assertEqual(row['username'], self.athlete1.username)
+        self.assertEqual(row['routine'], copy1.pk)
+        self.assertEqual(row['logs'], 3)
+        self.assertEqual(row['sessions'], 2)
+        self.assertEqual(parse_datetime(row['last_activity']), last)
+
+        row = rows[self.athlete2.pk]
+        self.assertEqual(row['routine'], copy2.pk)
+        self.assertEqual(row['logs'], 0)
+        self.assertEqual(row['sessions'], 0)
+        self.assertIsNone(row['last_activity'])
+
+    def test_progress_after_athlete_deleted_copy(self):
+        """
+        An athlete who deleted the copy stays in the progress, without a routine. The same
+        template can then be assigned again.
+        """
+        team = self.make_team_with_athletes()
+        self.authenticate(self.coach)
+        assignment_id = self.assign_to_team(team).data['id']
+        AssignedRoutine.objects.get(athlete=self.athlete1).routine.delete()
+
+        response = self.client.get(
+            reverse('program-assignment-progress', kwargs={'pk': assignment_id})
+        )
+        rows = {row['athlete']: row for row in response.data}
+        self.assertEqual(set(rows), {self.athlete1.pk, self.athlete2.pk})
+        self.assertIsNone(rows[self.athlete1.pk]['routine'])
+        self.assertEqual(rows[self.athlete1.pk]['logs'], 0)
+        self.assertIsNotNone(rows[self.athlete2.pk]['routine'])
+
+        response = self.client.post(
+            reverse('program-assignment-list'),
+            {
+                'template': self.template.pk,
+                'athlete': self.athlete1.pk,
+                'start_date': '2026-11-10',
+                'end_date': '2026-12-10',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_only_coach_reads_progress(self):
+        """
+        Athletes get 403 and foreign users 404 for the progress of an assignment.
+        """
+        team = self.make_team_with_athletes()
+        self.authenticate(self.coach)
+        assignment_id = self.assign_to_team(team).data['id']
+        progress = reverse('program-assignment-progress', kwargs={'pk': assignment_id})
+
+        self.authenticate(self.athlete1)
+        self.assertEqual(self.client.get(progress).status_code, status.HTTP_403_FORBIDDEN)
+        self.authenticate(self.other_coach)
+        self.assertEqual(self.client.get(progress).status_code, status.HTTP_404_NOT_FOUND)

@@ -89,6 +89,14 @@ class ProgramAssignment(models.Model):
         auto_now_add=True,
     )
 
+    archived_at = models.DateTimeField(
+        verbose_name='Archived at',
+        null=True,
+        blank=True,
+        default=None,
+    )
+    """Set when the coach withdraws the assignment, the copies stay with the athletes"""
+
     def __str__(self):
         target = self.team if self.team else self.athlete
         return f'{self.template} -> {target}'

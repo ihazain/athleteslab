@@ -21,8 +21,11 @@ import logging
 # Django
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
+from django.db.models import Count, Max
+from django.utils import timezone
 
 # wger
+from wger.manager.models import WorkoutLog
 from wger.teams.models import (
     AssignedRoutine,
     ProgramAssignment,
@@ -161,9 +164,12 @@ def assign_program(*, template, assigned_by, start_date, end_date, team=None, at
         if not athletes:
             raise ValidationError('No athletes found for the given target.')
 
-        # The same template may not run twice for an athlete in overlapping periods
+        # The same template may not run twice for an athlete in overlapping periods.
+        # Archived assignments and copies the athlete deleted do not count.
         overlapping = AssignedRoutine.objects.filter(
             athlete__in=athletes,
+            routine__isnull=False,
+            assignment__archived_at__isnull=True,
             assignment__template=template,
             assignment__start_date__lte=end_date,
             assignment__end_date__gte=start_date,
@@ -197,3 +203,51 @@ def assign_program(*, template, assigned_by, start_date, end_date, team=None, at
             )
 
     return assignment
+
+
+def archive_assignment(assignment: ProgramAssignment) -> ProgramAssignment:
+    """
+    Withdraw an assignment. The copies and the logs of the athletes stay.
+    """
+    if assignment.archived_at is not None:
+        raise ValidationError('This assignment is already archived.')
+
+    assignment.archived_at = timezone.now()
+    assignment.save(update_fields=['archived_at'])
+    return assignment
+
+
+def assignment_progress(assignment: ProgramAssignment) -> list[dict]:
+    """
+    One entry per athlete of the assignment: the copy and what was logged against it.
+    """
+    assigned_routines = list(
+        assignment.assigned_routines.select_related('athlete').order_by('athlete__username')
+    )
+    stats = {
+        row['routine']: row
+        for row in WorkoutLog.objects.filter(
+            routine__in=[a.routine_id for a in assigned_routines if a.routine_id],
+        )
+        .values('routine')
+        .annotate(
+            logs=Count('pk'),
+            sessions=Count('session', distinct=True),
+            last_activity=Max('date'),
+        )
+    }
+
+    progress = []
+    for assigned in assigned_routines:
+        row = stats.get(assigned.routine_id, {})
+        progress.append(
+            {
+                'athlete': assigned.athlete_id,
+                'username': assigned.athlete.username,
+                'routine': assigned.routine_id,
+                'logs': row.get('logs', 0),
+                'sessions': row.get('sessions', 0),
+                'last_activity': row.get('last_activity'),
+            }
+        )
+    return progress

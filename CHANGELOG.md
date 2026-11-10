@@ -20,6 +20,11 @@ backend and REST API (`/api/v2/team/`, `/api/v2/team-membership/`,
   rejected with a 400, a team assignment is rejected as a whole in that case.
 * Assignments to a single athlete are visible to the athlete and to their
   coaches.
+* A coach withdraws an assignment with `program-assignment/{id}/archive/`.
+  It stays readable (`archived_at`), the athletes keep their copies and logs,
+  and the template can be assigned again.
+* `program-assignment/{id}/progress/` shows coaches per athlete whether the
+  copy still exists, the number of logs and sessions and the last activity.
 * Deleting a team removes its assignments, the athletes keep their copies and
   logs. Deleting a coach account keeps teams and assignments, `created_by` and
   `assigned_by` are then `null`.

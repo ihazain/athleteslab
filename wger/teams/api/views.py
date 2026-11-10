@@ -33,8 +33,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 # wger
-from wger.teams.api.permissions import IsAssignmentCoach, IsTeamCoach
+from wger.teams.api.permissions import (
+    IsAssignmentCoach,
+    IsTeamCoach,
+    is_assignment_coach,
+)
 from wger.teams.api.serializers import (
+    AssignmentProgressSerializer,
     ProgramAssignmentSerializer,
     TeamMembershipSerializer,
     TeamSerializer,
@@ -43,6 +48,10 @@ from wger.teams.models import (
     ProgramAssignment,
     Team,
     TeamMembership,
+)
+from wger.teams.services import (
+    archive_assignment,
+    assignment_progress,
 )
 
 
@@ -188,7 +197,7 @@ class ProgramAssignmentViewSet(viewsets.ModelViewSet):
     Creation calls ``assign_program`` which deep-copies the template for each
     athlete inside a transaction. Assignments are create-only: PUT/PATCH/
     DELETE are not allowed because copies already exist that athletes may
-    have logged against.
+    have logged against. A coach withdraws an assignment by archiving it.
     """
 
     serializer_class = ProgramAssignmentSerializer
@@ -231,3 +240,28 @@ class ProgramAssignmentViewSet(viewsets.ModelViewSet):
             raise exceptions.ValidationError(
                 detail=exc.messages if hasattr(exc, 'messages') else [str(exc)]
             )
+
+    @extend_schema(request=None, responses=ProgramAssignmentSerializer)
+    @action(detail=True, methods=['post'])
+    def archive(self, request, pk=None):
+        """
+        Archive the assignment. Copies and logs of the athletes stay.
+        """
+        try:
+            assignment = archive_assignment(self.get_object())
+        except DjangoValidationError as exc:
+            raise exceptions.ValidationError(detail=exc.messages)
+        return Response(self.get_serializer(assignment).data)
+
+    @extend_schema(responses=AssignmentProgressSerializer(many=True))
+    @action(detail=True, methods=['get'], pagination_class=None, filter_backends=[])
+    def progress(self, request, pk=None):
+        """
+        Per athlete: the copy and the activity logged against it. Coaches only.
+        """
+        assignment = self.get_object()
+        if not is_assignment_coach(request.user, assignment):
+            raise exceptions.PermissionDenied('Only a coach can read the progress.')
+        return Response(
+            AssignmentProgressSerializer(assignment_progress(assignment), many=True).data
+        )

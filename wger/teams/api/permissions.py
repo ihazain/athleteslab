@@ -21,6 +21,28 @@ from rest_framework import permissions
 from wger.teams.models import Team, TeamMembership
 
 
+def is_assignment_coach(user, assignment) -> bool:
+    """
+    True for an active coach of the assignment's team, or of a team of its athlete.
+    """
+    if assignment.team is not None:
+        return TeamMembership.objects.filter(
+            team=assignment.team,
+            user=user,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        ).exists()
+
+    return TeamMembership.objects.filter(
+        user=user,
+        role=TeamMembership.Role.COACH,
+        status=TeamMembership.Status.ACTIVE,
+        team__memberships__user=assignment.athlete,
+        team__memberships__role=TeamMembership.Role.ATHLETE,
+        team__memberships__status=TeamMembership.Status.ACTIVE,
+    ).exists()
+
+
 class IsTeamCoach(permissions.BasePermission):
     """
     Allows access to members of a team for safe methods, and to active coaches
@@ -73,21 +95,4 @@ class IsAssignmentCoach(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return True
 
-        if assignment.team is not None:
-            return TeamMembership.objects.filter(
-                team=assignment.team,
-                user=request.user,
-                role=TeamMembership.Role.COACH,
-                status=TeamMembership.Status.ACTIVE,
-            ).exists()
-
-        # Single-athlete assignment: requesting user must be a coach sharing
-        # a team with the athlete.
-        return TeamMembership.objects.filter(
-            user=request.user,
-            role=TeamMembership.Role.COACH,
-            status=TeamMembership.Status.ACTIVE,
-            team__memberships__user=assignment.athlete,
-            team__memberships__role=TeamMembership.Role.ATHLETE,
-            team__memberships__status=TeamMembership.Status.ACTIVE,
-        ).exists()
+        return is_assignment_coach(request.user, assignment)

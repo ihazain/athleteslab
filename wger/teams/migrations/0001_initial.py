@@ -52,6 +52,12 @@ class Migration(migrations.Migration):
                 ('end_date', models.DateField(verbose_name='End date')),
                 ('created', models.DateTimeField(auto_now_add=True, verbose_name='Creation date')),
                 (
+                    'archived_at',
+                    models.DateTimeField(
+                        blank=True, default=None, null=True, verbose_name='Archived at'
+                    ),
+                ),
+                (
                     'assigned_by',
                     models.ForeignKey(
                         null=True,
@@ -162,7 +168,8 @@ class Migration(migrations.Migration):
                 (
                     'routine',
                     models.OneToOneField(
-                        on_delete=django.db.models.deletion.CASCADE,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
                         to='manager.routine',
                         verbose_name='Routine copy',
                     ),
