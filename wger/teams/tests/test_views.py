@@ -258,7 +258,8 @@ class BrandTestCase(WgerTestCase):
 
         response = self.client.get(reverse('teams:overview'))
         self.assertContains(response, f'<title>Teams | {BRAND_NAME}</title>')
-        self.assertContains(response, 'teams/brand/icon-app.svg', count=2)
+        self.assertContains(response, 'teams/brand/icon-inverse.svg', count=1)
+        self.assertContains(response, 'teams/brand/icon-app.svg', count=1)
         self.assertContains(response, f'>{BRAND_NAME}</span>')
         self.assertNotContains(response, 'wger logo')
 
