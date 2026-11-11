@@ -5,6 +5,10 @@
 
 ## New features
 
+### Athlete Lab Pro
+This fork is called Athlete Lab Pro: new logo and name in the navigation, new
+browser icon, and the name in the title of every page.
+
 ### Teams (beta)
 A new `wger.teams` app lets coaches create teams, invite athletes and coaches
 as members, and assign routine templates to a whole team, a group of a team

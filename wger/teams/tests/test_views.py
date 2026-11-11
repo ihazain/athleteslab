@@ -33,6 +33,10 @@ from wger.teams.services import (
     archive_assignment,
     assign_program,
 )
+from wger.teams.templatetags.brand import (
+    BRAND_NAME,
+    brand_title,
+)
 
 
 class AthleteOverviewTestCase(WgerTestCase):
@@ -223,3 +227,40 @@ class AthleteOverviewTestCase(WgerTestCase):
 
         self.membership.refresh_from_db()
         self.assertEqual(self.membership.status, TeamMembership.Status.ACTIVE)
+
+
+class BrandTestCase(WgerTestCase):
+    """
+    Tests for the product name and logo in the page frame.
+    """
+
+    def test_brand_title(self):
+        """
+        The browser title is the page title followed by the product name, or the name alone.
+        """
+        self.assertEqual(brand_title('  Teams\n '), f'Teams | {BRAND_NAME}')
+        self.assertEqual(brand_title(' \n '), BRAND_NAME)
+
+    def test_page_frame_shows_brand(self):
+        """
+        Pages show the product name and logo in the navigation, the logo as icon and the
+        product name in the title, with the page title escaped once.
+        """
+        user = User.objects.create_user(username='coach', email='coach@example.com')
+        team = Team.objects.create(name='A&B <U18>', created_by=user)
+        TeamMembership.objects.create(
+            team=team,
+            user=user,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('teams:overview'))
+        self.assertContains(response, f'<title>Teams | {BRAND_NAME}</title>')
+        self.assertContains(response, 'teams/brand/icon-app.svg', count=2)
+        self.assertContains(response, f'>{BRAND_NAME}</span>')
+        self.assertNotContains(response, 'wger logo')
+
+        response = self.client.get(reverse('teams:team-detail', kwargs={'pk': team.pk}))
+        self.assertContains(response, f'<title>A&amp;B &lt;U18&gt; | {BRAND_NAME}</title>')

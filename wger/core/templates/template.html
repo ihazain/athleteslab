@@ -16,7 +16,7 @@
     along with Workout Manager. If not, see <http://www.gnu.org/licenses/>.
 -->
 
-{% load i18n static wger_extras django_bootstrap_breadcrumbs %}
+{% load i18n static wger_extras django_bootstrap_breadcrumbs brand %}
 {% block breadcrumbs %}
     {% clear_breadcrumbs %}
 {% endblock %}
@@ -27,7 +27,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/png">
+    <link rel="icon" href="{% static 'teams/brand/icon-app.svg' %}" type="image/svg+xml">
 
     <!-- OpenGraph -->
     {% block opengraph %}
@@ -55,7 +55,7 @@
 
     {% block header %}{% endblock %}
 
-    <title>{% block title %}{% endblock %}</title>
+    <title>{% filter brand_title %}{% block title %}{% endblock %}{% endfilter %}</title>
 </head>
 <body>
 
