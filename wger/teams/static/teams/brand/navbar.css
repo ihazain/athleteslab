@@ -108,6 +108,11 @@
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.9%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
 }
 
+/* Icons of the sections, only shown in the folded sidebar */
+.alp-navbar .alp-nav-icon {
+    display: none;
+}
+
 /* Button that folds the sidebar, only there on desktop */
 .alp-sidebar-toggle {
     display: none;
@@ -371,9 +376,93 @@
         margin: 0 0 0.9rem;
     }
 
-    .alp-sidebar-collapsed .alp-navbar .alp-wordmark,
+    .alp-sidebar-collapsed .alp-navbar .alp-wordmark {
+        display: none;
+    }
+
+    /* Folded: one icon per section and one for the account, menus fly out to the right */
     .alp-sidebar-collapsed .alp-navbar .navbar-collapse {
+        align-items: center;
+        margin-top: 0.6rem;
+    }
+
+    .alp-sidebar-collapsed .alp-navbar .navbar-nav {
+        align-items: center;
+        gap: 0.3rem;
+    }
+
+    .alp-sidebar-collapsed .alp-navbar .navbar-nav > .nav-item > .nav-link,
+    .alp-sidebar-collapsed .alp-navbar .navbar-nav.me-auto > .nav-item > .nav-link,
+    .alp-sidebar-collapsed .alp-navbar .navbar-nav.me-auto > .nav-item:last-child > .nav-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.6rem;
+        height: 2.6rem;
+        margin: 0;
+        padding: 0;
+        overflow: visible;
+        color: rgba(255, 255, 255, 0.72) !important;
+        font-size: 0;
+        letter-spacing: 0;
+        pointer-events: auto;
+    }
+
+    .alp-sidebar-collapsed .alp-navbar .navbar-nav > .nav-item > .nav-link:hover,
+    .alp-sidebar-collapsed .alp-navbar .navbar-nav > .nav-item > .nav-link.show {
+        color: #fff !important;
+        background-color: rgba(255, 255, 255, 0.12);
+    }
+
+    .alp-sidebar-collapsed .alp-navbar .navbar-nav > .nav-item > .nav-link::after,
+    .alp-sidebar-collapsed .alp-navbar .navbar-nav > .nav-item > .nav-link .caret {
         display: none !important;
+    }
+
+    .alp-sidebar-collapsed .alp-navbar .alp-nav-icon {
+        display: inline-block;
+        font-size: 1.15rem;
+    }
+
+    .alp-sidebar-collapsed .alp-navbar .navbar-nav .dropdown-menu,
+    .alp-sidebar-collapsed .alp-navbar .navbar-nav.me-auto .dropdown-menu,
+    .alp-sidebar-collapsed .alp-navbar .navbar-collapse > .navbar-nav:last-child .dropdown-menu {
+        position: fixed !important;
+        inset: auto auto auto calc(var(--alp-sidebar-width) + 0.4rem) !important;
+        transform: none !important;
+        min-width: 14rem;
+        max-height: calc(100vh - 1.6rem);
+        margin: -2.6rem 0 0;
+        padding: 0.4rem;
+        overflow-y: auto;
+        background: #151518;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 0.75rem;
+        box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
+    }
+
+    .alp-sidebar-collapsed .alp-navbar .navbar-nav .dropdown-menu:not(.show) {
+        display: none !important;
+    }
+
+    /* The account menu grows upwards from the bottom of the window */
+    .alp-sidebar-collapsed .alp-navbar .navbar-collapse > .navbar-nav:last-child .dropdown-menu {
+        inset: auto auto 0.8rem calc(var(--alp-sidebar-width) + 0.4rem) !important;
+        margin: 0;
+    }
+
+    .alp-sidebar-collapsed .alp-navbar .navbar-collapse > .navbar-nav:last-child .dropdown-item {
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    .alp-sidebar-collapsed .alp-navbar .navbar-collapse > .navbar-nav:last-child .dropdown-item:hover,
+    .alp-sidebar-collapsed .alp-navbar .navbar-collapse > .navbar-nav:last-child .dropdown-item:focus {
+        color: #fff;
+        background-color: rgba(255, 255, 255, 0.09);
+    }
+
+    .alp-sidebar-collapsed .alp-navbar .navbar-collapse > .navbar-nav:last-child .dropdown-divider {
+        border-color: rgba(255, 255, 255, 0.12);
     }
 
     .alp-sidebar-collapsed .alp-sidebar-toggle {

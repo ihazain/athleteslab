@@ -9,7 +9,8 @@
 This fork is called Athlete Lab Pro: new logo and name, new browser icon, and
 the name in the title of every page. On desktop the menu is a black sidebar on
 the left that lists all sections, marks the current page and can be folded to
-a narrow rail (the browser remembers it). On phones and tablets it is a black
+a narrow rail with one icon per section and one for the account, whose menus
+open beside it (the browser remembers the state). On phones and tablets it is a black
 top bar, and the opened menu now sits below the logo instead of beside it.
 
 ### Teams (beta)

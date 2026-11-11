@@ -26,7 +26,7 @@
                         <a href="{% url 'manager:routine:overview' %}"
                            rel="nofollow"
                            class="nav-link dropdown-toggle text-white {% if active_tab == 'workout' %}text-decoration-underline{% endif %}"
-                           data-bs-toggle="dropdown">{% translate "Training" %} <b class="caret"></b></a>
+                           data-bs-toggle="dropdown"><span class="{% fa_class 'dumbbell' %} alp-nav-icon" aria-hidden="true"></span>{% translate "Training" %} <b class="caret"></b></a>
                         <ul class="dropdown-menu">
                             <li>
                                 <a class="dropdown-item" href="{% url 'manager:routine:overview' %}"
@@ -153,7 +153,7 @@
                         <a href="{% url 'nutrition:plan:overview' %}"
                            class="dropdown-toggle nav-link text-white {% if active_tab == 'nutrition' %}text-decoration-underline{% endif %}"
                            data-bs-toggle="dropdown"
-                           rel="nofollow">{% translate "Nutrition" %} <b class="caret"></b></a>
+                           rel="nofollow"><span class="{% fa_class 'utensils' %} alp-nav-icon" aria-hidden="true"></span>{% translate "Nutrition" %} <b class="caret"></b></a>
                         <ul class="dropdown-menu">
                             <li>
                                 <a class="dropdown-item" href="{% url 'nutrition:plan:overview' %}"
@@ -200,7 +200,7 @@
                             <a href="{% url 'weight:overview' %}"
                                class="dropdown-toggle nav-link text-white {% if active_tab == 'weight' %}text-decoration-underline{% endif %}"
                                data-bs-toggle="dropdown"
-                               rel="nofollow">{% translate "Body weight" %} <b
+                               rel="nofollow"><span class="{% fa_class 'weight-scale' %} alp-nav-icon" aria-hidden="true"></span>{% translate "Body weight" %} <b
                                 class="caret"></b></a>
                             <ul class="dropdown-menu">
                                 <li>
@@ -221,7 +221,7 @@
                     <li class="nav-item dropdown">
                         <a href=""
                            class="dropdown-toggle nav-link text-white {% if active_tab == 'software' %}text-decoration-underline{% endif %}"
-                           data-bs-toggle="dropdown">{% translate "About this software" %} <b
+                           data-bs-toggle="dropdown"><span class="{% fa_class 'circle-info' %} alp-nav-icon" aria-hidden="true"></span>{% translate "About this software" %} <b
                             class="caret"></b></a>
                         <ul class="dropdown-menu">
                             <li>
@@ -275,7 +275,7 @@
                         <li class="dropdown nav-item">
                             <a href="#" class="dropdown-toggle nav-link text-white"
                                data-bs-toggle="dropdown">
-                                {% translate "Login" %}{% if allow_registration %} /
+                                <span class="{% fa_class 'right-to-bracket' %} alp-nav-icon" aria-hidden="true"></span>{% translate "Login" %}{% if allow_registration %} /
                                     {% translate "Register" %}{% endif %}
                                 <span class="caret"></span>
                             </a>
@@ -319,7 +319,7 @@
                         <li class="dropdown nav-item">
                             <a href="#" class="dropdown-toggle nav-link text-white"
                                data-bs-toggle="dropdown">
-                                {{ user|format_username }}
+                                <span class="{% fa_class 'circle-user' %} alp-nav-icon" aria-hidden="true"></span>{{ user|format_username }}
                                 <span class="caret"></span>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-lg-end">

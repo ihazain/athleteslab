@@ -58,6 +58,16 @@
         }
     }
 
+    // The folded sidebar shows icons only, the name of each entry is then its tooltip
+    function nameTopLevelEntries() {
+        document.querySelectorAll('.alp-navbar .navbar-nav > .nav-item > .nav-link').forEach(function (link) {
+            var name = link.textContent.replace(/\s+/g, ' ').trim();
+            if (name && !link.getAttribute('title')) {
+                link.setAttribute('title', name);
+            }
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         var button = document.querySelector('.alp-sidebar-toggle');
         applyCollapsed(readCollapsed(), button);
@@ -69,5 +79,6 @@
             });
         }
         markCurrentPage();
+        nameTopLevelEntries();
     });
 })();

@@ -265,6 +265,9 @@ class BrandTestCase(WgerTestCase):
         self.assertContains(response, 'teams/brand/sidebar.js')
         self.assertContains(response, 'class="alp-sidebar-toggle"', count=1)
         self.assertContains(response, 'data-label-expand="Expand menu"')
+        # One icon per section of the menu and one for the account
+        self.assertContains(response, 'alp-nav-icon', count=5)
+        self.assertContains(response, 'fa-circle-user fa-fw alp-nav-icon')
         self.assertNotContains(response, 'wger logo')
 
         response = self.client.get(reverse('teams:team-detail', kwargs={'pk': team.pk}))
