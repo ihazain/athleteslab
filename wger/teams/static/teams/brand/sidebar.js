@@ -1,19 +1,20 @@
-/* Sidebar of Athlete Lab Pro: remembers whether it is collapsed and marks the current page. */
+/* Sidebar of Athlete Lab Pro: remembers whether it is folded or hidden and marks the current page. */
 (function () {
     var STORAGE_KEY = 'alp-sidebar-collapsed';
+    var HIDDEN_KEY = 'alp-sidebar-hidden';
     var root = document.documentElement;
 
-    function readCollapsed() {
+    function read(key) {
         try {
-            return window.localStorage.getItem(STORAGE_KEY) === '1';
+            return window.localStorage.getItem(key) === '1';
         } catch (error) {
             return false;
         }
     }
 
-    function storeCollapsed(collapsed) {
+    function store(key, value) {
         try {
-            window.localStorage.setItem(STORAGE_KEY, collapsed ? '1' : '0');
+            window.localStorage.setItem(key, value ? '1' : '0');
         } catch (error) {
             // Private windows may refuse storage, the sidebar then just starts open
         }
@@ -29,8 +30,13 @@
         }
     }
 
-    // Before the page is drawn, so a collapsed sidebar does not flash open
-    applyCollapsed(readCollapsed(), null);
+    function applyHidden(hidden) {
+        root.classList.toggle('alp-sidebar-hidden', hidden);
+    }
+
+    // Before the page is drawn, so a folded or hidden sidebar does not flash open
+    applyCollapsed(read(STORAGE_KEY), null);
+    applyHidden(read(HIDDEN_KEY));
 
     function markCurrentPage() {
         var path = window.location.pathname;
@@ -70,12 +76,28 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         var button = document.querySelector('.alp-sidebar-toggle');
-        applyCollapsed(readCollapsed(), button);
+        var hide = document.querySelector('.alp-sidebar-hide');
+        var show = document.querySelector('.alp-sidebar-show');
+        applyCollapsed(read(STORAGE_KEY), button);
         if (button) {
             button.addEventListener('click', function () {
                 var collapsed = !root.classList.contains('alp-sidebar-collapsed');
                 applyCollapsed(collapsed, button);
-                storeCollapsed(collapsed);
+                store(STORAGE_KEY, collapsed);
+            });
+        }
+        if (hide && show) {
+            // Outside of the sidebar, so it stays on screen while the sidebar is away
+            document.body.appendChild(show);
+            hide.addEventListener('click', function () {
+                applyHidden(true);
+                store(HIDDEN_KEY, true);
+                show.focus();
+            });
+            show.addEventListener('click', function () {
+                applyHidden(false);
+                store(HIDDEN_KEY, false);
+                hide.focus();
             });
         }
         markCurrentPage();

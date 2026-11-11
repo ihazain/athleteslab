@@ -263,7 +263,10 @@ class BrandTestCase(WgerTestCase):
         self.assertContains(response, f'<span class="alp-wordmark">{BRAND_NAME}</span>')
         self.assertContains(response, 'teams/brand/navbar.css')
         self.assertContains(response, 'teams/brand/sidebar.js')
-        self.assertContains(response, 'class="alp-sidebar-toggle"', count=1)
+        # Fold and hide inside the sidebar, show for the time it is hidden
+        for name in ('alp-sidebar-toggle', 'alp-sidebar-hide'):
+            self.assertContains(response, f'class="alp-sidebar-button {name}"', count=1)
+        self.assertContains(response, 'class="alp-sidebar-show"', count=1)
         self.assertContains(response, 'data-label-expand="Expand menu"')
         # One icon per section of the menu and one for the account
         self.assertContains(response, 'alp-nav-icon', count=8)

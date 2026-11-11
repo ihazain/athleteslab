@@ -12,6 +12,10 @@ the left that lists all sections, marks the current page and can be folded to
 a narrow rail with one icon per section and one for the account, whose menus
 open beside it (the browser remembers the state). On phones and tablets it is a black
 top bar, and the opened menu now sits below the logo instead of beside it.
+The sidebar can also be hidden completely; a round button at the bottom left
+brings it back. The buttons to fold and to hide it sit at the bottom of the
+sidebar. Logo and name stay on top and the account stays at the bottom, only
+the menu between them scrolls in a low window.
 
 ### Training, calendar and teams as modules
 * The words changed: a **routine** is the training of one day, a **plan** is a
