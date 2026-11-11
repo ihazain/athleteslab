@@ -210,3 +210,115 @@ class TrainingPagesTestCase(WgerTestCase):
         self.assertEqual([d.exercises for d in days], [2, 1, 0])
         self.assertNotContains(response, 'Foreign day')
         self.assertNotContains(response, '>Rest<')
+
+    # --- New program ---
+
+    def program_payload(self, **overrides) -> dict:
+        data = {
+            'name': 'Built program',
+            'start_date': '2026-11-16',
+            'end_date': '2026-12-13',
+        }
+        data.update(overrides)
+        return data
+
+    def test_new_program_form_offers_own_and_public_sources(self):
+        """
+        The form offers own plans and public plans, and the own routines without rest days.
+        The Programs tab links to it.
+        """
+        Routine.objects.filter(pk=self.foreign_plan.pk).update(is_public=True)
+        private = self.make_routine(self.other, 'Private plan', (2026, 1, 1), (2026, 1, 28), True)
+
+        response = self.client.get(reverse('training:program-new'))
+
+        self.assertEqual(response.status_code, 200)
+        form = response.context['form']
+        offered = {
+            plan for plan in form.fields['plan'].queryset if plan.user in (self.user, self.other)
+        }
+        self.assertEqual(offered, {self.plan, self.foreign_plan})
+        self.assertNotIn(private, form.fields['plan'].queryset)
+        self.assertEqual(
+            [day.name for day in form.fields['routines'].queryset],
+            ['Upper body', 'Plan day A', 'Plan day B'],
+        )
+        self.assertContains(response, 'Upper body (from Base block)')
+        self.assertContains(
+            self.client.get(reverse('training:programs')), reverse('training:program-new')
+        )
+
+    def test_new_program_from_plan_and_routine(self):
+        """
+        Posting a plan and a routine creates the program with copies of both and opens it
+        in the editor.
+        """
+        response = self.client.post(
+            reverse('training:program-new'),
+            self.program_payload(plan=self.plan.pk, routines=[self.upper.pk]),
+        )
+
+        program = Routine.objects.get(name='Built program')
+        self.assertRedirects(
+            response,
+            reverse('manager:routine:edit', kwargs={'pk': program.pk}),
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(program.user, self.user)
+        self.assertFalse(program.is_template)
+        self.assertEqual(
+            (program.start, program.end), (datetime.date(2026, 11, 16), datetime.date(2026, 12, 13))
+        )
+        self.assertEqual(
+            [day.name for day in program.days.order_by('order')],
+            ['Plan day A', 'Plan day B', 'Upper body'],
+        )
+        # The sources are untouched
+        self.assertEqual(self.plan.days.count(), 2)
+        self.assertEqual(self.current.days.count(), 2)
+
+    def test_new_program_invalid_input_creates_nothing(self):
+        """
+        No source, a routine or private plan of another user, a rest day, wrong dates and a
+        too long period show the form again with an error and create nothing.
+        """
+        count = Routine.objects.count()
+        foreign_day = Day.objects.get(name='Foreign day')
+        rest_day = Day.objects.get(name='Rest')
+        cases = (
+            {},
+            {'routines': [foreign_day.pk]},
+            {'routines': [self.upper.pk, foreign_day.pk]},
+            {'routines': [rest_day.pk]},
+            {'plan': self.foreign_plan.pk},
+            {'plan': self.current.pk},
+            {'plan': self.plan.pk, 'name': ''},
+            {'plan': self.plan.pk, 'name': 'x' * 26},
+            {'plan': self.plan.pk, 'end_date': '2026-11-15'},
+            {'plan': self.plan.pk, 'end_date': '2027-03-17'},
+            {'plan': self.plan.pk, 'start_date': 'soon'},
+        )
+        for overrides in cases:
+            response = self.client.post(
+                reverse('training:program-new'), self.program_payload(**overrides)
+            )
+            self.assertEqual(response.status_code, 200, overrides)
+            self.assertTrue(response.context['form'].errors, overrides)
+
+        self.assertEqual(Routine.objects.count(), count)
+
+    def test_new_program_needs_login(self):
+        """
+        Anonymous users are sent to the login and create nothing.
+        """
+        self.client.logout()
+        count = Routine.objects.count()
+        for response in (
+            self.client.get(reverse('training:program-new')),
+            self.client.post(
+                reverse('training:program-new'), self.program_payload(plan=self.plan.pk)
+            ),
+        ):
+            self.assertEqual(response.status_code, 302)
+            self.assertIn('login', response.url)
+        self.assertEqual(Routine.objects.count(), count)

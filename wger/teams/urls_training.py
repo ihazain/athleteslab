@@ -23,6 +23,7 @@ from wger.teams.views import training
 
 urlpatterns = [
     path('', training.programs, name='programs'),
+    path('programs/new', training.program_new, name='program-new'),
     path('plans', training.plans, name='plans'),
     path('routines', training.routines, name='routines'),
 ]

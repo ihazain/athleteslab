@@ -1,0 +1,30 @@
+{% extends "base_wide.html" %}
+{% load i18n static crispy_forms_tags %}
+
+{% block title %}{% translate "New program" %}{% endblock %}
+
+{% block header %}
+    <link rel="stylesheet" type="text/css" href="{% static 'teams/brand/pages.css' %}">
+{% endblock %}
+
+
+{% block content %}
+    <p><a href="{% url 'training:programs' %}">&laquo; {% translate "Programs" %}</a></p>
+
+    <p class="text-muted">
+        {% blocktranslate trimmed %}
+            Build the program from what you already have: pick a plan, single routines, or
+            both. Everything is copied, so the originals stay as they are. Afterwards the
+            program opens in the editor, where you can change it.
+        {% endblocktranslate %}
+    </p>
+
+    <form method="post" action="{% url 'training:program-new' %}" class="alp-form">
+        {% csrf_token %}
+        {{ form|crispy }}
+        <button type="submit" class="btn btn-primary">{% translate "Create program" %}</button>
+        <a class="btn btn-link" href="{% url 'manager:routine:add' %}">
+            {% translate "Start with an empty program instead" %}
+        </a>
+    </form>
+{% endblock %}

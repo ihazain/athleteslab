@@ -28,7 +28,10 @@ from django.utils.translation import (
 )
 
 # wger
-from wger.manager.models import Routine
+from wger.manager.models import (
+    Day,
+    Routine,
+)
 from wger.teams.models import (
     Team,
     TeamGroup,
@@ -178,3 +181,63 @@ class AssignProgramForm(forms.Form):
         if target in self.groups:
             return {'group': self.groups[target]}
         return {'athlete': self.athletes[target]}
+
+
+class RoutineChoiceField(forms.ModelMultipleChoiceField):
+    def label_from_instance(self, obj: Day) -> str:
+        return _('%(routine)s (from %(parent)s)') % {
+            'routine': obj.name or _('Unnamed routine'),
+            'parent': obj.routine.name,
+        }
+
+
+class NewProgramForm(forms.Form):
+    """
+    A new program from an existing plan, from single routines, or from both.
+    """
+
+    def __init__(self, *args, user, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields['name'] = forms.CharField(
+            label=_('Name'),
+            max_length=Routine._meta.get_field('name').max_length,
+        )
+
+        today = timezone.now().astimezone(user.userprofile.zone_info).date()
+        date_widget = {'widget': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d')}
+        self.fields['start_date'] = forms.DateField(
+            label=_('Start date'), initial=today, **date_widget
+        )
+        self.fields['end_date'] = forms.DateField(
+            label=_('End date'), initial=today + datetime.timedelta(days=27), **date_widget
+        )
+
+        self.fields['plan'] = TemplateChoiceField(
+            label=_('Start from a plan'),
+            user=user,
+            queryset=Routine.objects.filter(is_template=True)
+            .filter(Q(user=user) | Q(is_public=True))
+            .order_by('name', 'pk'),
+            required=False,
+            empty_label=_('No plan'),
+            help_text=_('All routines of the plan are copied into the program.'),
+        )
+        self.fields['routines'] = RoutineChoiceField(
+            label=_('Add single routines'),
+            queryset=Day.objects.filter(routine__user=user, is_rest=False)
+            .select_related('routine')
+            .order_by('routine__is_template', 'routine__name', 'routine__pk', 'order', 'pk'),
+            required=False,
+            widget=forms.CheckboxSelectMultiple,
+            help_text=_('Copies of these routines are added after the ones of the plan.'),
+        )
+
+    def clean(self):
+        cleaned = super().clean()
+        start, end = cleaned.get('start_date'), cleaned.get('end_date')
+        if start and end and start > end:
+            self.add_error('end_date', _('The end date must not be before the start date.'))
+        if not self.errors and not cleaned.get('plan') and not cleaned.get('routines'):
+            raise forms.ValidationError(_('Pick a plan or at least one routine.'))
+        return cleaned

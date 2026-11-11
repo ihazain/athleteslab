@@ -15,13 +15,22 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Django
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.db.models import (
     Count,
     Q,
 )
-from django.shortcuts import render
-from django.views.decorators.http import require_GET
+from django.shortcuts import (
+    redirect,
+    render,
+)
+from django.utils.translation import gettext as _
+from django.views.decorators.http import (
+    require_GET,
+    require_http_methods,
+)
 
 # wger
 from wger.manager.models import (
@@ -29,7 +38,9 @@ from wger.manager.models import (
     Routine,
 )
 from wger.teams.calendar import user_today
+from wger.teams.forms import NewProgramForm
 from wger.teams.models import AssignedRoutine
+from wger.teams.services import create_program
 
 
 def _weeks(routine: Routine) -> int:
@@ -110,3 +121,29 @@ def routines(request):
         .order_by('routine__is_template', 'routine__name', 'routine__pk', 'order', 'pk')
     )
     return render(request, 'training/routines.html', {'tab': 'routines', 'days': days})
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def program_new(request):
+    """
+    Create a program from an existing plan and/or single routines, then open it in the editor.
+    """
+    form = NewProgramForm(request.POST or None, user=request.user)
+    if request.method == 'POST' and form.is_valid():
+        try:
+            program = create_program(
+                user=request.user,
+                name=form.cleaned_data['name'],
+                start_date=form.cleaned_data['start_date'],
+                end_date=form.cleaned_data['end_date'],
+                plan=form.cleaned_data['plan'],
+                days=form.cleaned_data['routines'],
+            )
+        except ValidationError as exc:
+            form.add_error(None, exc.messages)
+        else:
+            messages.success(request, _('The program was created. You can adjust it here.'))
+            return redirect('manager:routine:edit', pk=program.pk)
+
+    return render(request, 'training/program_new.html', {'tab': 'programs', 'form': form})

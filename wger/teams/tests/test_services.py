@@ -52,7 +52,11 @@ from wger.teams.models import (
     TeamGroup,
     TeamMembership,
 )
-from wger.teams.services import assign_program, copy_routine
+from wger.teams.services import (
+    assign_program,
+    copy_routine,
+    create_program,
+)
 
 
 class AssignProgramTestCase(WgerTestCase):
@@ -861,3 +865,173 @@ class CopyRoutineTestCase(WgerTestCase):
             [(entry.repetition_rounding, entry.weight_rounding) for entry in entries],
             [(1, 2.5), (2, 5)],
         )
+
+    # --- create_program ---
+
+    @staticmethod
+    def day_content(day: Day) -> list:
+        """
+        The content of a day without ids, parent references and its order number.
+        """
+
+        def content(instance, *exclude):
+            return model_to_dict(instance, exclude=['id', *exclude])
+
+        result = [content(day, 'routine', 'order')]
+        for slot in day.slots.order_by('pk'):
+            result.append(content(slot, 'day'))
+            for entry in slot.entries.order_by('pk'):
+                result.append(content(entry, 'slot'))
+                for model in CopyRoutineTestCase.CONFIG_MODELS:
+                    configs = model.objects.filter(slot_entry=entry).order_by('pk')
+                    result.append([model.__name__] + [content(c, 'slot_entry') for c in configs])
+        return result
+
+    def new_program(self, **kwargs) -> Routine:
+        params = {
+            'user': self.athlete,
+            'name': 'My program',
+            'start_date': self.start,
+            'end_date': self.end,
+        }
+        params.update(kwargs)
+        return create_program(**params)
+
+    def own_routine(self, name: str, *day_names: str) -> list:
+        """
+        A program of the athlete with one day per name, each with one exercise.
+        """
+        routine = Routine.objects.create(
+            user=self.athlete, name=name, start=self.start, end=self.end
+        )
+        days = []
+        for order, day_name in enumerate(day_names, start=1):
+            day = Day.objects.create(routine=routine, order=order, name=day_name)
+            slot = Slot.objects.create(day=day, order=1)
+            entry = SlotEntry.objects.create(
+                slot=slot,
+                exercise_id=1,
+                repetition_unit=RepetitionUnit.objects.first(),
+                weight_unit=WeightUnit.objects.first(),
+                order=1,
+            )
+            WeightConfig.objects.create(slot_entry=entry, iteration=1, value=order)
+            days.append(day)
+        return days
+
+    def test_program_from_plan(self):
+        """
+        A program from a public plan has the content of the plan, the given name and period
+        and belongs to the user. The plan stays untouched.
+        """
+        self.add_day(1, entries=2)
+        self.add_day(2, entries=1)
+        before = self.tree(self.template)
+
+        program = self.new_program(plan=self.template)
+
+        self.assertEqual(self.tree(program)[1:], before[1:])
+        self.assertEqual(program.name, 'My program')
+        self.assertEqual(program.user, self.athlete)
+        self.assertEqual((program.start, program.end), (self.start, self.end))
+        self.assertFalse(program.is_template or program.is_public)
+        self.assertEqual(self.tree(self.template), before)
+        self.assertEqual(self.template.name, 'Template')
+
+    def test_program_from_single_routines(self):
+        """
+        A program from single routines has copies of exactly these days in the order given,
+        numbered from one. The originals stay where they are.
+        """
+        push, pull, legs = self.own_routine('Source', 'Push', 'Pull', 'Legs')
+
+        program = self.new_program(days=[legs, push])
+
+        days = list(program.days.order_by('order'))
+        self.assertEqual([(d.name, d.order) for d in days], [('Legs', 1), ('Push', 2)])
+        self.assertEqual(self.day_content(days[0]), self.day_content(legs))
+        self.assertEqual(self.day_content(days[1]), self.day_content(push))
+        self.assertEqual(len(self.day_content(legs)), 3 + len(self.CONFIG_MODELS))
+        self.assertTrue({d.pk for d in days}.isdisjoint({push.pk, pull.pk, legs.pk}))
+        self.assertEqual(push.routine.days.count(), 3)
+        self.assertEqual(Slot.objects.filter(day__routine=program).count(), 2)
+
+    def test_program_from_plan_and_routines(self):
+        """
+        With a plan and routines the days of the plan come first, the routines follow.
+        """
+        self.add_day(1, entries=1)
+        self.add_day(2, entries=1)
+        push, pull = self.own_routine('Source', 'Push', 'Pull')
+
+        program = self.new_program(plan=self.template, days=[pull, push])
+
+        self.assertEqual(
+            [(d.name, d.order) for d in program.days.order_by('order')],
+            [('Day 1', 1), ('Day 2', 2), ('Pull', 3), ('Push', 4)],
+        )
+        self.assertEqual(self.template.days.count(), 2)
+
+    def test_program_needs_a_source(self):
+        """
+        Without a plan and without routines nothing is created.
+        """
+        count = Routine.objects.count()
+        with self.assertRaises(ValidationError):
+            self.new_program()
+        self.assertEqual(Routine.objects.count(), count)
+
+    def test_program_only_from_allowed_sources(self):
+        """
+        A private plan of another user and routines of another user cannot be used, also
+        not mixed with allowed ones. Nothing is created.
+        """
+        self.add_day(1, entries=1)
+        Routine.objects.filter(pk=self.template.pk).update(is_public=False)
+        self.template.refresh_from_db()
+        foreign_day = Day.objects.create(routine=self.template, order=5, name='Coach day')
+        (own_day,) = self.own_routine('Source', 'Push')
+        count = Routine.objects.count()
+        day_count = Day.objects.count()
+
+        with self.assertRaises(PermissionDenied):
+            self.new_program(plan=self.template)
+        with self.assertRaises(PermissionDenied):
+            self.new_program(days=[own_day, foreign_day])
+
+        self.assertEqual(Routine.objects.count(), count)
+        self.assertEqual(Day.objects.count(), day_count)
+
+        # The owner can use the own private plan
+        program = self.new_program(user=self.coach, plan=self.template)
+        self.assertEqual(program.user, self.coach)
+
+    def test_program_period_limits(self):
+        """
+        The end must not be before the start and the program at most 120 days long.
+        """
+        self.add_day(1, entries=1)
+        day = datetime.timedelta(days=1)
+        limit = datetime.timedelta(days=Routine.MAX_DURATION_DAYS)
+        count = Routine.objects.count()
+
+        for end in (self.start - day, self.start + limit + day):
+            with self.assertRaises(ValidationError):
+                self.new_program(plan=self.template, end_date=end)
+        self.assertEqual(Routine.objects.count(), count)
+
+        for end in (self.start, self.start + limit):
+            self.assertEqual(self.new_program(plan=self.template, end_date=end).end, end)
+
+    def test_program_query_count_does_not_grow_with_the_routines(self):
+        """
+        Creating a program from many routines needs the same number of queries as from one.
+        """
+        days = self.own_routine('Source', 'A', 'B', 'C', 'D', 'E')
+
+        with CaptureQueriesContext(connection) as small:
+            self.new_program(days=days[:1])
+        with CaptureQueriesContext(connection) as big:
+            self.new_program(days=days)
+
+        self.assertEqual(len(big), len(small))

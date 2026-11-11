@@ -18,6 +18,11 @@ top bar, and the opened menu now sits below the logo instead of beside it.
   reusable set of routines (what wger calls a template), a **program** is a
   plan that runs over weeks (a dated wger routine, own or assigned by a coach).
 * New Training page with the tabs Programs, Plans and Routines.
+* "New program" builds a program from what exists: pick one of your plans or a
+  public plan, tick single routines, or both. Everything is copied and the
+  program then opens in the editor.
+* A program, also an assigned one, can be at most 120 days long, like in the
+  editor.
 * New Calendar page with a week view (planned routine and sessions done per
   day), a timeline of the programs over twelve weeks and a year view.
 * Teams is its own entry in the menu. For coaches the page starts with a

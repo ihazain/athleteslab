@@ -4,8 +4,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: athleteslab teams\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-11 15:59+0100\n"
-"PO-Revision-Date: 2026-11-11 15:59+0100\n"
+"POT-Creation-Date: 2026-11-11 16:09+0100\n"
+"PO-Revision-Date: 2026-11-11 16:09+0100\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
 "Language: de\n"
@@ -31,7 +31,6 @@ msgid "Members"
 msgstr "Mitglieder"
 
 #, python-format
-#| msgid "%(name)s (public template)"
 msgid "%(name)s (public plan)"
 msgstr "%(name)s (öffentlicher Plan)"
 
@@ -59,6 +58,35 @@ msgstr "Enddatum"
 
 msgid "The end date must not be before the start date."
 msgstr "Das Enddatum darf nicht vor dem Startdatum liegen."
+
+#, python-format
+msgid "%(routine)s (from %(parent)s)"
+msgstr "%(routine)s (aus %(parent)s)"
+
+msgid "Unnamed routine"
+msgstr "Unbenannte Routine"
+
+msgid "Start from a plan"
+msgstr "Mit einem Plan beginnen"
+
+msgid "No plan"
+msgstr "Kein Plan"
+
+msgid "All routines of the plan are copied into the program."
+msgstr "Alle Routinen des Plans werden in das Programm kopiert."
+
+msgid "Add single routines"
+msgstr "Einzelne Routinen hinzufügen"
+
+msgid "Copies of these routines are added after the ones of the plan."
+msgstr "Kopien dieser Routinen werden nach denen des Plans angefügt."
+
+msgid "Pick a plan or at least one routine."
+msgstr "Wähle einen Plan oder mindestens eine Routine."
+
+#, python-format
+msgid "A program cannot be longer than %(days)d days."
+msgstr "Ein Programm kann höchstens %(days)d Tage lang sein."
 
 msgid "There are no active athletes in the selected target."
 msgstr "In der gewählten Zielgruppe gibt es keine aktiven Athleten."
@@ -165,10 +193,6 @@ msgstr ""
 msgid "Assign a program"
 msgstr "Programm zuweisen"
 
-#| msgid ""
-#| "Every athlete gets an own copy of the program for this period. Later changes"
-#| " to the template do not change the copies. Invited members who have not "
-#| "accepted yet receive nothing."
 msgid ""
 "Every athlete gets an own copy of the program for this period. Later changes"
 " to the plan do not change the copies. Invited members who have not accepted"
@@ -191,7 +215,6 @@ msgstr ""
 msgid "Plans"
 msgstr "Pläne"
 
-#| msgid "Deleted template"
 msgid "Deleted plan"
 msgstr "Gelöschter Plan"
 
@@ -214,9 +237,6 @@ msgstr[0] "%(trained)s von %(total)s Athlet"
 msgstr[1] "%(trained)s von %(total)s Athleten"
 
 #, python-format
-#| msgid ""
-#| "This assignment was withdrawn on %(date)s. The athletes keep their routines "
-#| "and logs."
 msgid ""
 "This assignment was withdrawn on %(date)s. The athletes keep their programs "
 "and logs."
@@ -248,8 +268,6 @@ msgstr "Vom Athleten gelöscht"
 msgid "Not started"
 msgstr "Nicht begonnen"
 
-#| msgid ""
-#| "Withdraw this assignment? The athletes keep their routines and logs."
 msgid "Withdraw this assignment? The athletes keep their programs and logs."
 msgstr ""
 "Diese Zuweisung zurückziehen? Die Athleten behalten ihre Programme und "
@@ -320,7 +338,6 @@ msgstr "Deine Programme"
 msgid "Assigned to you personally"
 msgstr "Dir persönlich zugewiesen"
 
-#| msgid "You deleted this routine"
 msgid "You deleted this program"
 msgstr "Du hast dieses Programm gelöscht"
 
@@ -438,7 +455,6 @@ msgstr "Team-Einstellungen"
 msgid "Rename"
 msgstr "Umbenennen"
 
-#| msgid "Delete this team? The athletes keep their routines and logs."
 msgid "Delete this team? The athletes keep their programs and logs."
 msgstr ""
 "Dieses Team löschen? Die Athleten behalten ihre Programme und Protokolle."
@@ -468,15 +484,31 @@ msgid_plural "%(count)s routines"
 msgstr[0] "%(count)s Routine"
 msgstr[1] "%(count)s Routinen"
 
+msgid "New program"
+msgstr "Neues Programm"
+
+msgid ""
+"Build the program from what you already have: pick a plan, single routines, "
+"or both. Everything is copied, so the originals stay as they are. Afterwards"
+" the program opens in the editor, where you can change it."
+msgstr ""
+"Baue das Programm aus dem, was du schon hast: Wähle einen Plan, einzelne "
+"Routinen oder beides. Alles wird kopiert, die Originale bleiben unverändert."
+" Danach öffnet sich das Programm im Editor, wo du es ändern kannst."
+
+#| msgid "New program"
+msgid "Create program"
+msgstr "Programm erstellen"
+
+msgid "Start with an empty program instead"
+msgstr "Stattdessen mit einem leeren Programm beginnen"
+
 msgid ""
 "A program is a plan that runs over several weeks. You train it, and a coach "
 "can assign one to you."
 msgstr ""
 "Ein Programm ist ein Plan, der über mehrere Wochen läuft. Du trainierst "
 "danach, und ein Trainer kann dir eines zuweisen."
-
-msgid "New program"
-msgstr "Neues Programm"
 
 msgid "Running"
 msgstr "Läuft"
@@ -500,9 +532,6 @@ msgid ""
 msgstr ""
 "Eine Routine ist das Training eines einzelnen Tages. Routinen gehören zu "
 "einem Plan oder Programm und werden dort bearbeitet."
-
-msgid "Unnamed routine"
-msgstr "Unbenannte Routine"
 
 #, python-format
 msgid "%(count)s exercise"
@@ -531,8 +560,6 @@ msgstr "Das Team wurde erstellt. Lade jetzt deine Athleten ein."
 msgid "The team was renamed."
 msgstr "Das Team wurde umbenannt."
 
-#| msgid ""
-#| "The team was deleted. The athletes keep their routines and logs."
 msgid "The team was deleted. The athletes keep their programs and logs."
 msgstr ""
 "Das Team wurde gelöscht. Die Athleten behalten ihre Programme und "
@@ -574,10 +601,12 @@ msgstr[0] ""
 msgstr[1] ""
 "Das Programm wurde zugewiesen, %(count)d Athleten haben eine Kopie erhalten."
 
-#| msgid ""
-#| "The assignment was withdrawn. The athletes keep their routines and logs."
 msgid ""
 "The assignment was withdrawn. The athletes keep their programs and logs."
 msgstr ""
 "Die Zuweisung wurde zurückgezogen. Die Athleten behalten ihre Programme und "
 "Protokolle."
+
+#| msgid "The team was created. Invite your athletes now."
+msgid "The program was created. You can adjust it here."
+msgstr "Das Programm wurde erstellt. Du kannst es hier anpassen."

@@ -37,6 +37,7 @@ from wger.manager.models import (
     RepetitionsConfig,
     RestConfig,
     RiRConfig,
+    Routine,
     SetsConfig,
     Slot,
     SlotEntry,
@@ -69,25 +70,63 @@ CONFIG_MODELS = (
 )
 
 
-def _copy_rows(rows, parent_field: str, parent_copies: dict) -> dict:
+def _copy_rows(rows, parent_field: str, parent_copies: dict, prepare=None) -> dict:
     """
     Copies the rows below the copies of their parents with a single insert.
 
     Returns the copies by the pk of their original. bulk_create sends no
     signals: saving row by row resets the routine cache for every row, which
-    walks the whole routine each time.
+    walks the whole routine each time. ``prepare(copy, index)`` can change a
+    copy before it is written.
     """
     originals = list(rows)
     copies = []
-    for row in originals:
+    for index, row in enumerate(originals):
         row_copy = copy.copy(row)
         row_copy.pk = None
         setattr(row_copy, parent_field, parent_copies[getattr(row, f'{parent_field}_id')])
+        if prepare is not None:
+            prepare(row_copy, index)
         copies.append(row_copy)
 
     if copies:
         type(copies[0]).objects.bulk_create(copies)
     return {row.pk: row_copy for row, row_copy in zip(originals, copies)}
+
+
+def copy_days(days, routine, owner, first_order: int | None = None) -> None:
+    """
+    Copy training days with their slots, entries and configs into the routine.
+
+    The days keep their order number, or are numbered from ``first_order`` on
+    in the order given.
+    """
+    days = list(days)
+    day_pks = [day.pk for day in days]
+
+    def renumber(day_copy, index):
+        if first_order is not None:
+            day_copy.order = first_order + index
+
+    day_copies = _copy_rows(days, 'routine', {day.routine_id: routine for day in days}, renumber)
+    slots = _copy_rows(Slot.objects.filter(day__in=day_pks).order_by('pk'), 'day', day_copies)
+
+    # Like SlotEntry.save() does for new entries, fall back to the rounding of the owner
+    profile = owner.userprofile
+    entries = SlotEntry.objects.filter(slot__day__in=day_pks).order_by('pk')
+    entry_copies = _copy_rows(entries, 'slot', slots)
+    SlotEntry.objects.filter(
+        pk__in=[entry.pk for entry in entry_copies.values()],
+        repetition_rounding__isnull=True,
+    ).update(repetition_rounding=profile.repetitions_rounding)
+    SlotEntry.objects.filter(
+        pk__in=[entry.pk for entry in entry_copies.values()],
+        weight_rounding__isnull=True,
+    ).update(weight_rounding=profile.weight_rounding)
+
+    for model in CONFIG_MODELS:
+        configs = model.objects.filter(slot_entry__slot__day__in=day_pks).order_by('pk')
+        _copy_rows(configs, 'slot_entry', entry_copies)
 
 
 def copy_routine(template, owner, start, end):
@@ -107,30 +146,58 @@ def copy_routine(template, owner, start, end):
     routine_copy.start = start
     routine_copy.end = end
     routine_copy.save()
-    routines = {template.pk: routine_copy}
 
-    _copy_rows(template.labels.order_by('pk'), 'routine', routines)
-    days = _copy_rows(template.days.order_by('pk'), 'routine', routines)
-    slots = _copy_rows(Slot.objects.filter(day__routine=template).order_by('pk'), 'day', days)
-
-    # Like SlotEntry.save() does for new entries, fall back to the rounding of the owner
-    profile = owner.userprofile
-    entries = SlotEntry.objects.filter(slot__day__routine=template).order_by('pk')
-    entry_copies = _copy_rows(entries, 'slot', slots)
-    SlotEntry.objects.filter(
-        pk__in=[entry.pk for entry in entry_copies.values()],
-        repetition_rounding__isnull=True,
-    ).update(repetition_rounding=profile.repetitions_rounding)
-    SlotEntry.objects.filter(
-        pk__in=[entry.pk for entry in entry_copies.values()],
-        weight_rounding__isnull=True,
-    ).update(weight_rounding=profile.weight_rounding)
-
-    for model in CONFIG_MODELS:
-        configs = model.objects.filter(slot_entry__slot__day__routine=template).order_by('pk')
-        _copy_rows(configs, 'slot_entry', entry_copies)
+    _copy_rows(template.labels.order_by('pk'), 'routine', {template.pk: routine_copy})
+    copy_days(template.days.order_by('pk'), routine_copy, owner)
 
     return routine_copy
+
+
+def _check_period(start_date: datetime.date, end_date: datetime.date) -> None:
+    if start_date > end_date:
+        raise ValidationError(_('The end date must not be before the start date.'))
+    if (end_date - start_date).days > Routine.MAX_DURATION_DAYS:
+        raise ValidationError(
+            _('A program cannot be longer than %(days)d days.')
+            % {'days': Routine.MAX_DURATION_DAYS}
+        )
+
+
+def create_program(*, user, name: str, start_date, end_date, plan=None, days=()):
+    """
+    Create a program for the user from an existing plan, single routines (days) or both.
+
+    The plan may be an own routine or a public template, the days must be the
+    user's own. Everything is copied: the program starts with the days of the
+    plan, followed by the chosen days in the order given.
+    """
+    _check_period(start_date, end_date)
+    days = list(days)
+    if plan is None and not days:
+        raise ValidationError(_('Pick a plan or at least one routine.'))
+    if plan is not None and not _can_use_template(user, plan):
+        raise PermissionDenied('The user may not use this plan.')
+    if any(day.routine.user_id != user.pk for day in days):
+        raise PermissionDenied('The user may only use own routines.')
+
+    with transaction.atomic():
+        if plan is not None:
+            program = copy_routine(plan, user, start_date, end_date)
+            program.name = name
+            program.save(update_fields=['name'])
+        else:
+            program = Routine.objects.create(
+                user=user,
+                name=name,
+                start=start_date,
+                end=end_date,
+            )
+
+        if days:
+            last = program.days.order_by('-order').values_list('order', flat=True).first() or 0
+            copy_days(days, program, user, first_order=last + 1)
+
+    return program
 
 
 def _can_use_template(user, template):
@@ -167,8 +234,7 @@ def assign_program(
     if group is not None:
         team = group.team
 
-    if start_date > end_date:
-        raise ValidationError('start_date must not be after end_date.')
+    _check_period(start_date, end_date)
 
     with transaction.atomic():
         if not _can_use_template(assigned_by, template):
