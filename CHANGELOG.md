@@ -25,6 +25,7 @@ support follows later.
   athlete (with the number of athletes who receive a copy) and the period.
   The assignment page shows who received the program, sessions and last
   activity per athlete, and lets the coach withdraw the assignment.
+* The teams pages are available in German.
 * A new membership is an invitation (`status: invited`). Only the invited user
   can answer it with `team-membership/{id}/accept/` or `.../decline/`. Invited
   members receive no copies and have no coach rights until they accept.

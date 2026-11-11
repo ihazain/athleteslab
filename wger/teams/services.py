@@ -203,7 +203,7 @@ def assign_program(
             athletes = [athlete]
 
         if not athletes:
-            raise ValidationError('No athletes found for the given target.')
+            raise ValidationError(_('There are no active athletes in the selected target.'))
 
         # The same template may not run twice for an athlete in overlapping periods.
         # Archived assignments and copies the athlete deleted do not count.
@@ -218,7 +218,8 @@ def assign_program(
         if overlapping:
             names = ', '.join(sorted({assigned.athlete.username for assigned in overlapping}))
             raise ValidationError(
-                f'This template is already assigned for an overlapping period to: {names}'
+                _('This program is already assigned for an overlapping period to: %(names)s')
+                % {'names': names}
             )
 
         assignment = ProgramAssignment.objects.create(
@@ -252,7 +253,7 @@ def archive_assignment(assignment: ProgramAssignment) -> ProgramAssignment:
     Withdraw an assignment. The copies and the logs of the athletes stay.
     """
     if assignment.archived_at is not None:
-        raise ValidationError('This assignment is already archived.')
+        raise ValidationError(_('This assignment was already withdrawn.'))
 
     assignment.archived_at = timezone.now()
     assignment.save(update_fields=['archived_at'])
@@ -299,7 +300,7 @@ def _own_open_invitation(membership: TeamMembership, user) -> None:
     if membership.user_id != user.pk:
         raise PermissionDenied('Only the invited user can answer an invitation.')
     if membership.status != TeamMembership.Status.INVITED:
-        raise ValidationError('This membership is not an open invitation.')
+        raise ValidationError(_('This is not an open invitation.'))
 
 
 def accept_invitation(membership: TeamMembership, user) -> TeamMembership:
