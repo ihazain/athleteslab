@@ -1,0 +1,110 @@
+# Athlete Lab Pro: production stack.
+#
+# Usage, from this directory:
+#   ./init-env.sh my-domain.example      (once, writes .env with fresh secrets)
+#   docker compose up -d --build
+#
+# See README.md for the whole procedure, backups and updates.
+
+name: athleteslab
+
+x-app: &app
+  image: athleteslab/server:local
+  build:
+    context: ..
+    dockerfile: extras/docker/production/Dockerfile
+    args:
+      BUILD_COMMIT: ${BUILD_COMMIT:-unknown}
+      BUILD_DATE: ${BUILD_DATE:-unknown}
+  env_file: .env
+  restart: unless-stopped
+
+services:
+  web:
+    <<: *app
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+    volumes:
+      - static:/home/wger/static
+      - media:/home/wger/media
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8000 || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 5m
+      retries: 5
+
+  celery_worker:
+    <<: *app
+    command: /start-worker
+    depends_on:
+      web:
+        condition: service_healthy
+    volumes:
+      - media:/home/wger/media
+
+  celery_beat:
+    <<: *app
+    command: /start-beat
+    depends_on:
+      celery_worker:
+        condition: service_started
+    volumes:
+      - beat:/home/wger/beat
+
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DJANGO_DB_USER}
+      POSTGRES_PASSWORD: ${DJANGO_DB_PASSWORD}
+      POSTGRES_DB: ${DJANGO_DB_DATABASE}
+    volumes:
+      - postgres:/var/lib/postgresql
+    healthcheck:
+      test: pg_isready -U ${DJANGO_DB_USER} -d ${DJANGO_DB_DATABASE}
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  cache:
+    image: redis:8-alpine
+    restart: unless-stopped
+    volumes:
+      - redis:/data
+    healthcheck:
+      test: redis-cli ping
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Terminates TLS (certificate from Let's Encrypt for SITE_DOMAIN) and serves
+  # the static and uploaded files
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - web
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - static:/srv/static:ro
+      - media:/srv/media:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  postgres:
+  redis:
+  static:
+  media:
+  beat:
+  caddy_data:
+  caddy_config:

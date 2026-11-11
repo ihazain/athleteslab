@@ -93,3 +93,7 @@ venv-wger
 
 # macOS
 .DS_Store
+
+# Deployment: secrets and backups
+/deploy/.env
+/deploy/backups/

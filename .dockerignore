@@ -33,3 +33,10 @@ venv
 /extras/authors/commits_cache/
 /extras/authors/*.md
 /extras/scripts/*.json
+
+# Local data and secrets that must not end up in the image
+*.sqlite
+*.sqlite.orig
+/deploy/.env
+/deploy/backups/
+/PROJECTINSTRUCTION.md

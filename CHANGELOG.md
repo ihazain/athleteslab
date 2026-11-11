@@ -21,6 +21,14 @@ language switch is an entry of the menu (above "About this software"), imprint
 and terms of service are entries of "About this software". Visitors keep the
 footer.
 
+### Deployment
+* New `deploy/` directory with a complete production stack for one server:
+  application, PostgreSQL, Redis, Celery and Caddy with automatic HTTPS, an
+  `init-env.sh` that writes the configuration with fresh secrets, and scripts
+  for backup, restore test and restore. See `deploy/README.md`.
+* New settings `SESSION_COOKIE_SECURE` and `CSRF_COOKIE_SECURE` (environment
+  variables, default `False`): send the cookies over HTTPS only.
+
 ### Training, calendar and teams as modules
 * The words changed: a **routine** is the training of one day, a **plan** is a
   reusable set of routines (what wger calls a template), a **program** is a

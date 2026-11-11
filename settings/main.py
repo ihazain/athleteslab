@@ -317,6 +317,11 @@ if env.bool('X_FORWARDED_PROTO_HEADER_SET', False):
         'https',
     )
 
+# Send the session and CSRF cookies over HTTPS only. Enable when the site is
+# only reachable via HTTPS, a plain-HTTP login stops working otherwise.
+SESSION_COOKIE_SECURE = env.bool('SESSION_COOKIE_SECURE', False)
+CSRF_COOKIE_SECURE = env.bool('CSRF_COOKIE_SECURE', False)
+
 # Build absolute URLs (e.g. OAuth redirect URIs) from the X-Forwarded-Host
 # header instead of the Host header. Only enable this behind a reverse proxy
 # that sets the header, as it is otherwise attacker-controlled.
