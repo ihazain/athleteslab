@@ -1,10 +1,10 @@
 {% load static i18n wger_extras brand %}
-<nav class="navbar navbar-expand-md bg-primary">
+<nav class="navbar navbar-expand-md alp-navbar">
     <div class="container-fluid">
         <div class="container-lg" style="display: flex;">
             <a class="navbar-brand" href="{% url 'core:index' %}">
-                <img src="{% static 'teams/brand/icon-inverse.svg' %}" style="width: 38px;" alt="">
-                <span class="text-white fw-semibold align-middle ms-1">{% brand_name %}</span>
+                <img src="{% static 'teams/brand/icon-inverse.svg' %}" alt="">
+                <span class="alp-wordmark">{% brand_name %}</span>
             </a>
             <button class="navbar-toggler"
                     type="button"

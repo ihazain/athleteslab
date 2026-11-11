@@ -6,8 +6,9 @@
 ## New features
 
 ### Athlete Lab Pro
-This fork is called Athlete Lab Pro: new logo and name in the navigation, new
-browser icon, and the name in the title of every page.
+This fork is called Athlete Lab Pro: new logo and name in a restyled, black
+navigation bar, new browser icon, and the name in the title of every page. On
+phones the opened menu now sits below the logo instead of beside it.
 
 ### Teams (beta)
 A new `wger.teams` app lets coaches create teams, invite athletes and coaches
