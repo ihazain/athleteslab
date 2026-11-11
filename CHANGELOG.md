@@ -16,6 +16,10 @@ The sidebar can also be hidden completely; a round button at the bottom left
 brings it back. The buttons to fold and to hide it sit at the bottom of the
 sidebar. Logo and name stay on top and the account stays at the bottom, only
 the menu between them scrolls in a low window.
+Logged-in users no longer get the footer with the app store badges. The
+language switch is an entry of the menu (above "About this software"), imprint
+and terms of service are entries of "About this software". Visitors keep the
+footer.
 
 ### Training, calendar and teams as modules
 * The words changed: a **routine** is the training of one day, a **plan** is a

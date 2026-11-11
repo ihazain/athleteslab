@@ -124,6 +124,8 @@
 </div>
 
 
+{# The app has no footer: language and legal links are in the menu for logged-in users #}
+{% if not user.is_authenticated or user.userprofile.is_temporary %}
 <footer id="main-footer" class="bg-light border-top">
     <div class="container bg-wger-light">
         <div class="row">
@@ -215,6 +217,7 @@
         </div>
     </div>
 </footer>
+{% endif %}
 
 {% block extra_body %}{% endblock %}
 

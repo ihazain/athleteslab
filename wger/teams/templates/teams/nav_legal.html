@@ -1,0 +1,10 @@
+{% load i18n %}
+{# Legal links of the footer, which logged-in users do not get #}
+{% if user.is_authenticated and not user.userprofile.is_temporary %}
+    <li>
+        <a class="dropdown-item" href="{% url 'core:imprint' %}">{% translate "Imprint" %}</a>
+    </li>
+    <li>
+        <a class="dropdown-item" href="{% url 'software:tos' %}">{% translate "Terms of service" %}</a>
+    </li>
+{% endif %}

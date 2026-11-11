@@ -125,6 +125,11 @@
     display: none;
 }
 
+/* Logged-in users get no footer, so no room is kept for it */
+body:not(:has(#main-footer)) {
+    margin-bottom: 0 !important;
+}
+
 /* Collapsed menu on phones and tablets */
 @media (max-width: 991.98px) {
     .alp-navbar .navbar-collapse {
@@ -335,8 +340,10 @@
         margin-bottom: 0.5rem;
     }
 
-    /* The last section ("About this software") stays a menu that opens on click */
+    /* The language and the last section ("About this software") stay menus that open on click */
+    .alp-navbar .navbar-nav.me-auto > .nav-item.alp-language > .nav-link,
     .alp-navbar .navbar-nav.me-auto > .nav-item:last-child > .nav-link,
+    .alp-navbar .navbar-nav.me-auto > .nav-item.alp-language > .nav-link.text-decoration-underline,
     .alp-navbar .navbar-nav.me-auto > .nav-item:last-child > .nav-link.text-decoration-underline {
         margin-top: 1rem;
         padding: 0.42rem 0.6rem;
@@ -348,17 +355,30 @@
         pointer-events: auto;
     }
 
+    .alp-navbar .navbar-nav.me-auto > .nav-item.alp-language > .nav-link::after,
     .alp-navbar .navbar-nav.me-auto > .nav-item:last-child > .nav-link::after {
         display: inline-block;
     }
 
+    .alp-navbar .navbar-nav.me-auto > .nav-item.alp-language > .dropdown-menu:not(.show),
     .alp-navbar .navbar-nav.me-auto > .nav-item:last-child > .dropdown-menu:not(.show) {
         display: none;
     }
 
+    .alp-navbar .navbar-nav.me-auto > .nav-item.alp-language .dropdown-item,
     .alp-navbar .navbar-nav.me-auto > .nav-item:last-child .dropdown-item {
         padding-left: 1.2rem;
         font-size: 0.88rem;
+    }
+
+    .alp-navbar .navbar-nav.me-auto > .nav-item.alp-language + .nav-item:last-child > .nav-link {
+        margin-top: 0;
+    }
+
+    /* In the sidebar the languages are a list as wide as the menu */
+    .alp-navbar .navbar-nav.me-auto .language-menu {
+        width: auto;
+        max-height: none;
     }
 
     /* Account menu at the bottom, opening upwards */
@@ -573,6 +593,11 @@
         border: 1px solid rgba(255, 255, 255, 0.12);
         border-radius: 0.75rem;
         box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
+    }
+
+    .alp-sidebar-collapsed .alp-navbar .navbar-nav.me-auto .language-menu {
+        width: min(92vw, 420px);
+        max-height: 60vh;
     }
 
     .alp-sidebar-collapsed .alp-navbar .navbar-nav .dropdown-menu:not(.show) {

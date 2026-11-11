@@ -1,0 +1,23 @@
+{% load i18n wger_extras %}
+{# Language switch of the footer, which logged-in users do not get #}
+{% if user.is_authenticated and not user.userprofile.is_temporary and not is_api_path %}
+    <li class="nav-item dropdown alp-language">
+        <a href="#" rel="nofollow" class="nav-link dropdown-toggle text-white"
+           data-bs-toggle="dropdown"><span class="{% fa_class 'globe' %} alp-nav-icon" aria-hidden="true"></span>{% translate i18n_language.name %} <b class="caret"></b></a>
+        <ul class="dropdown-menu language-menu">
+            <li>
+                <a class="dropdown-item" href="{% url 'core:language:browser_language' %}?next={{ request.path }}">
+                    {% translate "Browser language" %}
+                </a>
+            </li>
+            <form id="language-form" action="{% url 'set_language' %}" method="post">
+                {% csrf_token %}
+                <input name="next" type="hidden" value="{{ redirect_to }}">
+                <input type="hidden" name="language" id="language-input">
+                {% for language in languages %}
+                    {% language_select language %}
+                {% endfor %}
+            </form>
+        </ul>
+    </li>
+{% endif %}

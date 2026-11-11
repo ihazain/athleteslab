@@ -269,7 +269,7 @@ class BrandTestCase(WgerTestCase):
         self.assertContains(response, 'class="alp-sidebar-show"', count=1)
         self.assertContains(response, 'data-label-expand="Expand menu"')
         # One icon per section of the menu and one for the account
-        self.assertContains(response, 'alp-nav-icon', count=8)
+        self.assertContains(response, 'alp-nav-icon', count=9)
         # The universal plus with its three entries comes first in the menu
         for name in ('program-new', 'plan-new', 'routine-new'):
             self.assertContains(response, reverse(f'training:{name}'))
@@ -280,3 +280,26 @@ class BrandTestCase(WgerTestCase):
 
         response = self.client.get(reverse('teams:team-detail', kwargs={'pk': team.pk}))
         self.assertContains(response, f'<title>A&amp;B &lt;U18&gt; | {BRAND_NAME}</title>')
+
+    def test_footer_only_for_visitors(self):
+        """
+        Logged-in users get no footer, the language switch and the legal links are in the
+        menu instead. Visitors keep the footer. The language form is on the page once.
+        """
+        legal = (reverse('core:imprint'), reverse('software:tos'))
+
+        response = self.client.get(reverse('core:user:login'))
+        self.assertContains(response, 'id="main-footer"', count=1)
+        self.assertContains(response, 'id="language-form"', count=1)
+        self.assertNotContains(response, 'alp-language')
+        for url in legal:
+            self.assertContains(response, f'href="{url}"', count=1)
+
+        user = User.objects.create_user(username='athlete', email='athlete@example.com')
+        self.client.force_login(user)
+        response = self.client.get(reverse('teams:overview'))
+        self.assertNotContains(response, 'id="main-footer"')
+        self.assertContains(response, 'id="language-form"', count=1)
+        self.assertContains(response, 'nav-item dropdown alp-language', count=1)
+        for url in legal:
+            self.assertContains(response, f'href="{url}"', count=1)
