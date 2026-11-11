@@ -34,6 +34,11 @@ urlpatterns = [
     path('team/<int:pk>/delete', coach.team_delete, name='team-delete'),
     path('team/<int:pk>/invite', coach.member_invite, name='member-invite'),
     path(
+        'team/<int:pk>/member/<int:membership_pk>',
+        coach.member_detail,
+        name='member-detail',
+    ),
+    path(
         'team/<int:pk>/member/<int:membership_pk>/role',
         coach.member_role,
         name='member-role',

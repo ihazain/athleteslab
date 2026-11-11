@@ -1,0 +1,21 @@
+{% load i18n %}
+<a class="alp-agenda-unit" href="{% url 'teams:assignment-detail' unit.assignment.pk %}">
+    <span class="fw-bold">{{ unit.name }}</span>
+    <span class="small text-muted">{{ unit.assignment.template.name|default:_("Deleted plan") }}</span>
+    <span class="alp-tag">
+        {% if unit.assignment.athlete %}
+            {{ unit.assignment.athlete.username }}
+        {% elif unit.assignment.group %}
+            {{ unit.assignment.group.name }}
+        {% else %}
+            {% translate "Whole team" %}
+        {% endif %}
+    </span>
+    {% if day.is_past or day.is_today %}
+        <span class="small">
+            {% blocktranslate with trained=unit.trained total=unit.athletes trimmed %}
+                {{ trained }} of {{ total }} trained
+            {% endblocktranslate %}
+        </span>
+    {% endif %}
+</a>

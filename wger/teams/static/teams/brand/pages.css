@@ -47,34 +47,41 @@
     );
 }
 
-/* Week */
+/* Week: one column per day, scrolls sideways on narrow screens */
+.alp-week-scroll {
+    overflow-x: auto;
+    padding: 2px;
+}
+
 .alp-week {
     display: grid;
-    gap: 0.6rem;
+    grid-template-columns: repeat(7, minmax(8.5rem, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
 }
 
 .alp-week-day {
-    display: grid;
-    grid-template-columns: 11rem 1fr auto;
-    gap: 0.75rem 1rem;
-    align-items: center;
-    padding: 0.85rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-height: 13rem;
+    padding: 0.75rem;
     background: #fff;
     border: 1px solid rgba(0, 0, 0, 0.1);
-    border-left: 4px solid transparent;
+    border-top: 4px solid transparent;
     border-radius: 0.75rem;
 }
 
 .alp-week-day.alp-state-trained {
-    border-left-color: #0b0b0d;
+    border-top-color: #0b0b0d;
 }
 
 .alp-week-day.alp-state-planned {
-    border-left-color: #8a8a93;
+    border-top-color: #8a8a93;
 }
 
 .alp-week-day.alp-state-missed {
-    border-left-color: #c9c9cf;
+    border-top-color: #c9c9cf;
     background: #fafafb;
 }
 
@@ -84,7 +91,8 @@
 }
 
 .alp-week-date,
-.alp-week-training {
+.alp-week-training,
+.alp-week-content {
     display: flex;
     flex-direction: column;
 }
@@ -95,30 +103,104 @@
 }
 
 .alp-week-content {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem 1.5rem;
+    flex: 1;
+    gap: 0.6rem;
 }
 
 .alp-week-training {
     color: inherit;
     text-decoration: none;
+    overflow-wrap: anywhere;
 }
 
-.alp-week-training:hover .fw-bold,
-.alp-week-training:focus .fw-bold {
+a.alp-week-training:hover .fw-bold,
+a.alp-week-training:focus .fw-bold {
     text-decoration: underline;
 }
 
-@media (max-width: 575.98px) {
-    .alp-week-day {
-        grid-template-columns: 1fr auto;
-    }
+/* Tags: role, team, group */
+.alp-tag {
+    display: inline-block;
+    align-self: flex-start;
+    padding: 0.1rem 0.55rem;
+    color: #0b0b0d;
+    font-size: 0.78rem;
+    font-weight: 500;
+    background: #e9e9ee;
+    border-radius: 999px;
+}
 
-    .alp-week-content {
-        grid-column: 1 / -1;
-        grid-row: 2;
-    }
+.alp-tag-coach {
+    color: #fff;
+    background: #0b0b0d;
+}
+
+/* Team agenda: one card per training date, side by side */
+.alp-agenda {
+    overflow-x: auto;
+    padding: 2px 2px 0.5rem;
+}
+
+.alp-agenda-track {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin: 0;
+}
+
+.alp-agenda-day {
+    display: flex;
+    flex: 0 0 13rem;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 0.75rem;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 0.75rem;
+}
+
+.alp-agenda-day.alp-past {
+    background: #fafafb;
+}
+
+.alp-agenda-day.alp-today {
+    border-color: #0b0b0d;
+    box-shadow: 0 0 0 1px #0b0b0d;
+}
+
+.alp-agenda-date,
+.alp-agenda-unit {
+    display: flex;
+    flex-direction: column;
+}
+
+.alp-agenda-date .badge {
+    align-self: flex-start;
+    margin-top: 0.2rem;
+}
+
+.alp-agenda-unit {
+    gap: 0.15rem;
+    color: inherit;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+
+.alp-agenda-unit:hover .fw-bold,
+.alp-agenda-unit:focus .fw-bold {
+    text-decoration: underline;
+}
+
+.alp-agenda-more summary {
+    color: #495057;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.alp-agenda-more .alp-agenda-unit {
+    margin-top: 0.6rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 /* Timeline */

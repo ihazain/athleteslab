@@ -16,6 +16,7 @@
 
 # Standard Library
 import datetime
+from collections import defaultdict
 from dataclasses import (
     dataclass,
     field,
@@ -29,6 +30,12 @@ from wger.manager.models import (
     Routine,
     WorkoutSession,
 )
+from wger.teams.models import (
+    AssignedRoutine,
+    ProgramAssignment,
+    Team,
+)
+from wger.teams.services import team_assignments
 
 
 @dataclass
@@ -80,12 +87,15 @@ def user_programs(user, start: datetime.date, end: datetime.date):
     ).order_by('start', 'pk')
 
 
-def calendar_days(user, start: datetime.date, end: datetime.date) -> list[CalendarDay]:
+def calendar_days(
+    user, start: datetime.date, end: datetime.date, programs=None
+) -> list[CalendarDay]:
     """
     One entry per date of the period with the planned training and the sessions done.
 
     Dates are calendar days of the user: sessions count for the day they
-    started on in the user's time zone.
+    started on in the user's time zone. With ``programs`` only these programs
+    and the sessions done for them count.
     """
     today = user_today(user)
     days = {}
@@ -96,7 +106,13 @@ def calendar_days(user, start: datetime.date, end: datetime.date) -> list[Calend
         )
         current += datetime.timedelta(days=1)
 
-    for program in user_programs(user, start, end):
+    if programs is None:
+        programs = user_programs(user, start, end)
+        sessions = WorkoutSession.objects.filter(user=user)
+    else:
+        sessions = WorkoutSession.objects.filter(user=user, routine__in=programs)
+
+    for program in programs:
         for entry in program.date_sequence:
             if entry.date in days and entry.day is not None and not entry.day.is_rest:
                 days[entry.date].planned.append(
@@ -106,8 +122,7 @@ def calendar_days(user, start: datetime.date, end: datetime.date) -> list[Calend
     # A day of margin on both sides: the UTC instant and the local day can differ
     zone = user.userprofile.zone_info
     margin = datetime.timedelta(days=1)
-    sessions = WorkoutSession.objects.filter(
-        user=user,
+    sessions = sessions.filter(
         datetime_start__date__gte=start - margin,
         datetime_start__date__lte=end + margin,
     )
@@ -117,6 +132,98 @@ def calendar_days(user, start: datetime.date, end: datetime.date) -> list[Calend
             days[local_day].sessions += 1
 
     return list(days.values())
+
+
+@dataclass
+class TeamUnit:
+    """
+    The routine (one training day) an assignment schedules on a date.
+    """
+
+    assignment: ProgramAssignment
+    name: str
+    athletes: int
+    trained: int = 0
+
+
+@dataclass
+class AgendaDay:
+    date: datetime.date
+    units: list[TeamUnit] = field(default_factory=list)
+    is_today: bool = False
+    is_past: bool = False
+
+    @property
+    def first(self) -> TeamUnit:
+        return self.units[0]
+
+    @property
+    def more(self) -> list[TeamUnit]:
+        return self.units[1:]
+
+
+def team_agenda(
+    team: Team, start: datetime.date, end: datetime.date, today: datetime.date
+) -> list[AgendaDay]:
+    """
+    The dates of the period with training for the team, each with the routines of the
+    running assignments and how many athletes trained.
+
+    The schedule of an assignment is the one of its first remaining copy. Sessions
+    count for the day they started on in the time zone of the athlete.
+    """
+    assignments = (
+        team_assignments(team)
+        .filter(archived_at__isnull=True, start_date__lte=end, end_date__gte=start)
+        .select_related('template', 'group', 'athlete')
+        .order_by('start_date', 'pk')
+    )
+    copies = defaultdict(list)
+    for copy in (
+        AssignedRoutine.objects.filter(assignment__in=assignments, routine__isnull=False)
+        .select_related('routine__user__userprofile')
+        .order_by('pk')
+    ):
+        copies[copy.assignment_id].append(copy)
+
+    # A day of margin on both sides: the UTC instant and the local day can differ
+    margin = datetime.timedelta(days=1)
+    by_routine = {copy.routine_id: copy for rows in copies.values() for copy in rows}
+    trained = defaultdict(set)
+    for session in WorkoutSession.objects.filter(
+        routine__in=by_routine,
+        datetime_start__date__gte=start - margin,
+        datetime_start__date__lte=end + margin,
+    ):
+        copy = by_routine[session.routine_id]
+        local_day = session.local_day_in(copy.routine.user.userprofile.zone_info)
+        trained[(copy.assignment_id, local_day)].add(copy.athlete_id)
+
+    days = {}
+    for assignment in assignments:
+        rows = copies.get(assignment.pk)
+        if not rows:
+            continue
+        program = rows[0].routine
+        for entry in program.date_sequence:
+            if not start <= entry.date <= end or entry.day is None or entry.day.is_rest:
+                continue
+            day = days.setdefault(
+                entry.date,
+                AgendaDay(
+                    date=entry.date, is_today=entry.date == today, is_past=entry.date < today
+                ),
+            )
+            day.units.append(
+                TeamUnit(
+                    assignment=assignment,
+                    name=entry.day.name or program.name,
+                    athletes=len(rows),
+                    trained=len(trained.get((assignment.pk, entry.date), ())),
+                )
+            )
+
+    return [days[date] for date in sorted(days)]
 
 
 def parse_date(value: str | None, default: datetime.date) -> datetime.date:

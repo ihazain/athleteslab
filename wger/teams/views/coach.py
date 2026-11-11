@@ -14,6 +14,9 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# Standard Library
+import datetime
+
 # Django
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -21,10 +24,7 @@ from django.core.exceptions import (
     PermissionDenied,
     ValidationError,
 )
-from django.db.models import (
-    Count,
-    Q,
-)
+from django.db.models import Count
 from django.http import Http404
 from django.shortcuts import (
     get_object_or_404,
@@ -42,6 +42,13 @@ from django.views.decorators.http import (
 )
 
 # wger
+from wger.teams.calendar import (
+    calendar_days,
+    parse_date,
+    team_agenda,
+    user_today,
+    week_start,
+)
 from wger.teams.forms import (
     AssignProgramForm,
     GroupForm,
@@ -53,7 +60,6 @@ from wger.teams.models import (
     TeamMembership,
 )
 from wger.teams.services import (
-    active_athletes,
     archive_assignment,
     assign_program,
     assignment_progress,
@@ -64,9 +70,16 @@ from wger.teams.services import (
     find_user,
     invite_member,
     is_assignment_coach,
+    member_programs,
     remove_member,
+    team_assignments,
     update_group,
 )
+
+
+AGENDA_WEEKS = 6
+AGENDA_WEEKS_BEFORE = 1
+AGENDA_STEP_WEEKS = 4
 
 
 def _coach_team(request, pk: int) -> Team:
@@ -141,22 +154,72 @@ def team_detail(request, pk: int):
         for group in team.groups.prefetch_related('members__user')
     ]
 
-    # Assignments of the team and its groups, and the ones made to its athletes
-    athletes = active_athletes(team.memberships).values('user')
     assignments = (
-        ProgramAssignment.objects.filter(Q(team=team) | Q(team__isnull=True, athlete__in=athletes))
+        team_assignments(team)
         .select_related('template', 'group', 'athlete')
         .annotate(received=Count('assigned_routines'))
         .order_by('-start_date', '-pk')
     )
+    today = user_today(request.user)
+    anchor = week_start(parse_date(request.GET.get('date'), today))
+    agenda_start = anchor - datetime.timedelta(weeks=AGENDA_WEEKS_BEFORE)
+    agenda_end = agenda_start + datetime.timedelta(weeks=AGENDA_WEEKS, days=-1)
     context = {
         'team': team,
         'memberships': memberships,
         'groups': groups,
         'group_form': GroupForm(team=team),
         'assignments': assignments,
+        'agenda': team_agenda(team, agenda_start, agenda_end, today),
+        'agenda_start': agenda_start,
+        'agenda_end': agenda_end,
+        'agenda_previous': anchor - datetime.timedelta(weeks=AGENDA_STEP_WEEKS),
+        'agenda_next': anchor + datetime.timedelta(weeks=AGENDA_STEP_WEEKS),
     }
     return render(request, 'teams/team_detail.html', context)
+
+
+@login_required
+@require_GET
+def member_detail(request, pk: int, membership_pk: int):
+    """
+    The profile of an active member for the coach: groups, assigned programs and the
+    week with the training planned by them.
+    """
+    team = _coach_team(request, pk)
+    membership = get_object_or_404(
+        TeamMembership.objects.select_related('user__userprofile'),
+        pk=membership_pk,
+        team=team,
+        status=TeamMembership.Status.ACTIVE,
+    )
+    member = membership.user
+    programs = member_programs(request.user, membership)
+
+    # The week of the member, not the one of the coach
+    today = user_today(member)
+    start = week_start(parse_date(request.GET.get('date'), today))
+    end = start + datetime.timedelta(days=6)
+    running = [
+        row['assigned'].routine
+        for row in programs
+        if row['assigned'].routine is not None
+        and row['assigned'].routine.start <= end
+        and row['assigned'].routine.end >= start
+    ]
+    context = {
+        'team': team,
+        'membership': membership,
+        'member': member,
+        'groups': membership.groups.all(),
+        'programs': programs,
+        'days': calendar_days(member, start, end, programs=running),
+        'start': start,
+        'end': end,
+        'previous': start - datetime.timedelta(days=7),
+        'next': start + datetime.timedelta(days=7),
+    }
+    return render(request, 'teams/member_detail.html', context)
 
 
 @login_required

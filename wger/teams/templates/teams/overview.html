@@ -68,8 +68,28 @@
                     <a class="btn btn-light btn-sm" href="{% url 'teams:team-detail' entry.team.pk %}">
                         {% translate "Open team" %}
                     </a>
+                    <a class="btn btn-light btn-sm" href="{% url 'teams:team-detail' entry.team.pk %}#agenda">
+                        {% translate "Calendar" %}
+                    </a>
                 </li>
             {% endfor %}
+        </ul>
+
+        <h4>{% translate "Your athletes" %}</h4>
+        <ul class="list-group mb-5">
+            {% for entry in dashboard.teams %}
+                {% for membership in entry.memberships %}
+                    <li class="list-group-item d-flex flex-wrap justify-content-between gap-2">
+                        <a href="{% url 'teams:member-detail' entry.team.pk membership.pk %}">
+                            {{ membership.user.get_full_name|default:membership.user.username }}
+                        </a>
+                        <span class="alp-tag">{{ entry.team.name }}</span>
+                    </li>
+                {% endfor %}
+            {% endfor %}
+            {% if not dashboard.athletes %}
+                <li class="list-group-item">{% translate "Your teams have no athletes yet." %}</li>
+            {% endif %}
         </ul>
     {% endif %}
 

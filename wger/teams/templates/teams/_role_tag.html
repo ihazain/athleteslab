@@ -1,0 +1,6 @@
+{% load i18n %}
+{% if role == 'coach' %}
+    <span class="alp-tag alp-tag-coach">{% translate "Coach" %}</span>
+{% else %}
+    <span class="alp-tag">{% translate "Athlete" %}</span>
+{% endif %}

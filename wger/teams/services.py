@@ -23,7 +23,7 @@ import logging
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
-from django.db.models import Count, Max
+from django.db.models import Count, Max, Q
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
@@ -404,14 +404,11 @@ def archive_assignment(assignment: ProgramAssignment) -> ProgramAssignment:
     return assignment
 
 
-def assignment_progress(assignment: ProgramAssignment) -> list[dict]:
+def _log_stats(assigned_routines) -> dict:
     """
-    One entry per athlete of the assignment: the copy and what was logged against it.
+    Logs, sessions and last activity per copied routine.
     """
-    assigned_routines = list(
-        assignment.assigned_routines.select_related('athlete').order_by('athlete__username')
-    )
-    stats = {
+    return {
         row['routine']: row
         for row in WorkoutLog.objects.filter(
             routine__in=[a.routine_id for a in assigned_routines if a.routine_id],
@@ -423,6 +420,16 @@ def assignment_progress(assignment: ProgramAssignment) -> list[dict]:
             last_activity=Max('date'),
         )
     }
+
+
+def assignment_progress(assignment: ProgramAssignment) -> list[dict]:
+    """
+    One entry per athlete of the assignment: the copy and what was logged against it.
+    """
+    assigned_routines = list(
+        assignment.assigned_routines.select_related('athlete').order_by('athlete__username')
+    )
+    stats = _log_stats(assigned_routines)
 
     progress = []
     for assigned in assigned_routines:
@@ -602,6 +609,48 @@ def active_athletes(memberships):
     )
 
 
+def team_assignments(team: Team):
+    """
+    The assignments to the team and its groups, and the ones made to its athletes.
+    """
+    athletes = active_athletes(team.memberships).values('user')
+    return ProgramAssignment.objects.filter(
+        Q(team=team) | Q(team__isnull=True, athlete__in=athletes)
+    )
+
+
+def member_programs(coach, membership: TeamMembership) -> list[dict]:
+    """
+    The programs the member received through teams of the coach, with what was logged.
+
+    Programs assigned to the member personally count if the member is an athlete.
+    """
+    visible = Q(
+        assignment__team__memberships__user=coach,
+        assignment__team__memberships__role=TeamMembership.Role.COACH,
+        assignment__team__memberships__status=TeamMembership.Status.ACTIVE,
+    )
+    if membership.role == TeamMembership.Role.ATHLETE:
+        visible |= Q(assignment__team__isnull=True)
+
+    assigned_routines = list(
+        AssignedRoutine.objects.filter(visible, athlete=membership.user)
+        .select_related('routine', 'assignment__template', 'assignment__team', 'assignment__group')
+        .order_by('-assignment__start_date', '-pk')
+        .distinct()
+    )
+    stats = _log_stats(assigned_routines)
+    return [
+        {
+            'assigned': assigned,
+            'assignment': assigned.assignment,
+            'sessions': stats.get(assigned.routine_id, {}).get('sessions', 0),
+            'last_activity': stats.get(assigned.routine_id, {}).get('last_activity'),
+        }
+        for assigned in assigned_routines
+    ]
+
+
 def _check_group(team: Team, user, name: str, memberships, group: TeamGroup | None) -> None:
     _require_coach(user, team)
     if any(membership.team_id != team.pk for membership in memberships):
@@ -658,12 +707,16 @@ def coach_dashboard(user, today: datetime.date) -> dict:
         memberships__role=TeamMembership.Role.COACH,
         memberships__status=TeamMembership.Status.ACTIVE,
     ).order_by('name', 'pk'):
-        members = set(active_athletes(team.memberships).values_list('user', flat=True))
+        memberships = list(
+            active_athletes(team.memberships).select_related('user').order_by('user__username')
+        )
+        members = {membership.user_id for membership in memberships}
         athletes |= members
         teams.append(
             {
                 'team': team,
                 'athletes': len(members),
+                'memberships': memberships,
                 'invited': team.memberships.filter(status=TeamMembership.Status.INVITED).count(),
                 'running': ProgramAssignment.objects.filter(
                     team=team,

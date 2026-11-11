@@ -32,6 +32,16 @@ top bar, and the opened menu now sits below the logo instead of beside it.
 * Teams is its own entry in the menu. For coaches the page starts with a
   dashboard: teams, athletes, running programs, open invitations, and per team
   how many athletes trained in the last seven days.
+* The week view of the calendar shows the seven days as columns side by side
+  instead of rows.
+* The team page of a coach starts with a team agenda: every date with training
+  as a card next to the others, scrollable sideways, six weeks at a time. A
+  date with several routines (groups, single athletes) shows the first one and
+  opens the others on click. Past dates show how many athletes trained.
+* Coaches open a profile for every active member from the team page or the
+  dashboard: role, team and groups as tags, the member's week and the programs
+  assigned in the coach's teams with sessions and last activity. Own programs
+  of the athlete and programs from other teams stay private.
 * The routine editor and the routine pages themselves still use wger's wording.
 
 ### Teams (beta)

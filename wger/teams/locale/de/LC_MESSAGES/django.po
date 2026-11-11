@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: athleteslab teams\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-11 20:08+0100\n"
+"POT-Creation-Date: 2026-11-11 20:31+0100\n"
 "PO-Revision-Date: 2026-11-11 16:09+0100\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
@@ -160,14 +160,26 @@ msgstr "Zeitleiste"
 msgid "Year"
 msgstr "Jahr"
 
+msgid "Today"
+msgstr "Heute"
+
+msgid "No training planned"
+msgstr "Kein Training geplant"
+
+#, python-format
+msgid "%(count)s session done"
+msgid_plural "%(count)s sessions done"
+msgstr[0] "%(count)s Einheit absolviert"
+msgstr[1] "%(count)s Einheiten absolviert"
+
+msgid "Not trained"
+msgstr "Nicht trainiert"
+
 msgid "Calendar"
 msgstr "Kalender"
 
 msgid "Earlier"
 msgstr "Früher"
-
-msgid "Today"
-msgstr "Heute"
 
 msgid "Later"
 msgstr "Später"
@@ -187,18 +199,6 @@ msgstr "Vorherige Woche"
 msgid "Next week"
 msgstr "Nächste Woche"
 
-msgid "No training planned"
-msgstr "Kein Training geplant"
-
-#, python-format
-msgid "%(count)s session done"
-msgid_plural "%(count)s sessions done"
-msgstr[0] "%(count)s Einheit absolviert"
-msgstr[1] "%(count)s Einheiten absolviert"
-
-msgid "Not trained"
-msgstr "Nicht trainiert"
-
 msgid "This year"
 msgstr "Dieses Jahr"
 
@@ -207,13 +207,29 @@ msgid "Trained on %(trained)s days, training planned on %(planned)s days."
 msgstr ""
 "An %(trained)s Tagen trainiert, an %(planned)s Tagen war Training geplant."
 
+msgid "Deleted plan"
+msgstr "Gelöschter Plan"
+
+msgid "Whole team"
+msgstr "Ganzes Team"
+
+#, python-format
+msgid "%(trained)s of %(total)s trained"
+msgstr "%(trained)s von %(total)s haben trainiert"
+
+msgid "Coach"
+msgstr "Trainer"
+
+msgid "Athlete"
+msgstr "Athlet"
+
 msgid "Assign a program"
 msgstr "Programm zuweisen"
 
 msgid ""
-"Every athlete gets an own copy of the program for this period. Later changes"
-" to the plan do not change the copies. Invited members who have not accepted"
-" yet receive nothing."
+"Every athlete gets an own copy of the program for this period. Later changes "
+"to the plan do not change the copies. Invited members who have not accepted "
+"yet receive nothing."
 msgstr ""
 "Jeder Athlet erhält für diesen Zeitraum eine eigene Kopie des Programms. "
 "Spätere Änderungen am Plan ändern die Kopien nicht. Eingeladene Mitglieder, "
@@ -231,9 +247,6 @@ msgstr ""
 
 msgid "Plans"
 msgstr "Pläne"
-
-msgid "Deleted plan"
-msgstr "Gelöschter Plan"
 
 msgid "Teams"
 msgstr "Teams"
@@ -264,9 +277,6 @@ msgstr ""
 msgid "Athletes"
 msgstr "Athleten"
 
-msgid "Athlete"
-msgstr "Athlet"
-
 msgid "Program"
 msgstr "Programm"
 
@@ -293,6 +303,18 @@ msgstr ""
 msgid "Withdraw assignment"
 msgstr "Zuweisung zurückziehen"
 
+msgid "Only programs assigned in your teams and the sessions done for them are shown."
+msgstr "Es werden nur Programme aus deinen Teams und die dafür absolvierten Einheiten angezeigt."
+
+msgid "Programs"
+msgstr "Programme"
+
+msgid "Withdrawn"
+msgstr "Zurückgezogen"
+
+msgid "No programs were assigned in your teams yet."
+msgstr "In deinen Teams wurden noch keine Programme zugewiesen."
+
 msgid "New"
 msgstr "Neu"
 
@@ -307,9 +329,6 @@ msgstr "Neue Routine"
 
 msgid "Dashboard"
 msgstr "Übersicht"
-
-msgid "Programs"
-msgstr "Programme"
 
 msgid "Routines"
 msgstr "Routinen"
@@ -348,6 +367,12 @@ msgstr "%(trained)s von %(total)s haben in den letzten 7 Tagen trainiert"
 msgid "Open team"
 msgstr "Team öffnen"
 
+msgid "Your athletes"
+msgstr "Deine Athleten"
+
+msgid "Your teams have no athletes yet."
+msgstr "Deine Teams haben noch keine Athleten."
+
 msgid "Invitations"
 msgstr "Einladungen"
 
@@ -379,9 +404,6 @@ msgstr "Dir wurden noch keine Programme zugewiesen."
 msgid "Your teams"
 msgstr "Deine Teams"
 
-msgid "Coach"
-msgstr "Trainer"
-
 msgid "You are not a member of a team yet."
 msgstr "Du bist noch in keinem Team Mitglied."
 
@@ -401,11 +423,17 @@ msgstr "Menü einklappen"
 msgid "Expand menu"
 msgstr "Menü ausklappen"
 
-msgid "Whole team"
-msgstr "Ganzes Team"
+msgid "Team agenda"
+msgstr "Team-Agenda"
 
-msgid "Withdrawn"
-msgstr "Zurückgezogen"
+#, python-format
+msgid "%(count)s more routine"
+msgid_plural "%(count)s more routines"
+msgstr[0] "%(count)s weitere Routine"
+msgstr[1] "%(count)s weitere Routinen"
+
+msgid "No training is planned for the team in these weeks."
+msgstr "In diesen Wochen ist für das Team kein Training geplant."
 
 msgid "No programs were assigned in this team yet."
 msgstr "In diesem Team wurden noch keine Programme zugewiesen."
@@ -444,8 +472,7 @@ msgid "Invite"
 msgstr "Einladen"
 
 msgid ""
-"The user needs an account and has to accept the invitation on the teams "
-"page."
+"The user needs an account and has to accept the invitation on the teams page."
 msgstr ""
 "Der Benutzer braucht ein Konto und muss die Einladung auf der Teams-Seite "
 "annehmen."
@@ -454,8 +481,8 @@ msgid ""
 "Groups are parts of the team, e.g. the goalkeepers. A program can be "
 "assigned to a group only."
 msgstr ""
-"Gruppen sind Teile des Teams, z. B. die Torhüter. Ein Programm kann auch nur"
-" einer Gruppe zugewiesen werden."
+"Gruppen sind Teile des Teams, z. B. die Torhüter. Ein Programm kann auch nur "
+"einer Gruppe zugewiesen werden."
 
 msgid "No members"
 msgstr "Keine Mitglieder"
@@ -495,16 +522,16 @@ msgid "Training"
 msgstr "Training"
 
 msgid ""
-"A plan is a set of routines you can reuse and, as a coach, assign to a team."
-" Build it from an existing plan, single routines, or both. Everything is "
+"A plan is a set of routines you can reuse and, as a coach, assign to a team. "
+"Build it from an existing plan, single routines, or both. Everything is "
 "copied. A plan cannot be changed afterwards: to change it, make a program "
 "from it, adjust that and save it as a new plan."
 msgstr ""
 "Ein Plan ist ein Satz von Routinen, den du wiederverwenden und als Coach "
 "einem Team zuweisen kannst. Erstelle ihn aus einem bestehenden Plan, aus "
-"einzelnen Routinen oder aus beidem. Alles wird kopiert. Ein Plan kann danach"
-" nicht mehr geändert werden: Um ihn zu ändern, erstelle ein Programm daraus,"
-" passe es an und speichere es als neuen Plan."
+"einzelnen Routinen oder aus beidem. Alles wird kopiert. Ein Plan kann danach "
+"nicht mehr geändert werden: Um ihn zu ändern, erstelle ein Programm daraus, "
+"passe es an und speichere es als neuen Plan."
 
 msgid "Create plan"
 msgstr "Plan erstellen"
@@ -530,12 +557,12 @@ msgstr[1] "%(count)s Routinen"
 
 msgid ""
 "Build the program from what you already have: pick a plan, single routines, "
-"or both. Everything is copied, so the originals stay as they are. Afterwards"
-" the program opens in the editor, where you can change it."
+"or both. Everything is copied, so the originals stay as they are. Afterwards "
+"the program opens in the editor, where you can change it."
 msgstr ""
 "Baue das Programm aus dem, was du schon hast: Wähle einen Plan, einzelne "
-"Routinen oder beides. Alles wird kopiert, die Originale bleiben unverändert."
-" Danach öffnet sich das Programm im Editor, wo du es ändern kannst."
+"Routinen oder beides. Alles wird kopiert, die Originale bleiben unverändert. "
+"Danach öffnet sich das Programm im Editor, wo du es ändern kannst."
 
 msgid "Create program"
 msgstr "Programm erstellen"
@@ -572,8 +599,8 @@ msgid ""
 "add the exercises."
 msgstr ""
 "Eine Routine ist das Training eines einzelnen Tages. Beginne mit einer "
-"leeren oder kopiere eine bestehende Routine. Danach öffnet sich ihr Programm"
-" im Editor, wo du die Übungen hinzufügst."
+"leeren oder kopiere eine bestehende Routine. Danach öffnet sich ihr Programm "
+"im Editor, wo du die Übungen hinzufügst."
 
 msgid "Create routine"
 msgstr "Routine erstellen"
@@ -614,8 +641,7 @@ msgstr "Das Team wurde umbenannt."
 
 msgid "The team was deleted. The athletes keep their programs and logs."
 msgstr ""
-"Das Team wurde gelöscht. Die Athleten behalten ihre Programme und "
-"Protokolle."
+"Das Team wurde gelöscht. Die Athleten behalten ihre Programme und Protokolle."
 
 msgid "No user with this username or e-mail address was found."
 msgstr ""

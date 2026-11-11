@@ -1,11 +1,75 @@
-{% extends "base.html" %}
-{% load i18n crispy_forms_tags %}
+{% extends "base_wide.html" %}
+{% load i18n static crispy_forms_tags %}
 
 {% block title %}{{ team.name }}{% endblock %}
+
+{% block header %}
+    <link rel="stylesheet" type="text/css" href="{% static 'teams/brand/pages.css' %}">
+{% endblock %}
 
 
 {% block content %}
     <p><a href="{% url 'teams:overview' %}">&laquo; {% translate "Teams" %}</a></p>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2" id="agenda">
+        <h4 class="mb-0">{% translate "Team agenda" %}</h4>
+        <div class="btn-group">
+            <a class="btn btn-light btn-sm" href="?date={{ agenda_previous|date:'Y-m-d' }}#agenda">
+                &laquo; {% translate "Earlier" %}
+            </a>
+            <a class="btn btn-light btn-sm" href="{% url 'teams:team-detail' team.pk %}#agenda">{% translate "Today" %}</a>
+            <a class="btn btn-light btn-sm" href="?date={{ agenda_next|date:'Y-m-d' }}#agenda">
+                {% translate "Later" %} &raquo;
+            </a>
+        </div>
+    </div>
+    <p class="text-muted small mb-2">
+        {{ agenda_start|date:"SHORT_DATE_FORMAT" }} &ndash; {{ agenda_end|date:"SHORT_DATE_FORMAT" }}
+    </p>
+    {% if agenda %}
+        <div class="alp-agenda mb-4" tabindex="0" role="region" aria-label="{% translate "Team agenda" %}">
+            <ol class="alp-agenda-track list-unstyled">
+                {% for day in agenda %}
+                    <li class="alp-agenda-day {% if day.is_today %}alp-today{% endif %} {% if day.is_past %}alp-past{% endif %}"
+                        {% if not day.is_past %}data-alp-upcoming{% endif %}>
+                        <div class="alp-agenda-date">
+                            <span class="fw-bold">{{ day.date|date:"l" }}</span>
+                            <span class="text-muted small">{{ day.date|date:"SHORT_DATE_FORMAT" }}</span>
+                            {% if day.is_today %}
+                                <span class="badge text-bg-dark">{% translate "Today" %}</span>
+                            {% endif %}
+                        </div>
+                        {% include 'teams/_agenda_unit.html' with unit=day.first %}
+                        {% if day.more %}
+                            <details class="alp-agenda-more">
+                                <summary>
+                                    {% blocktranslate count count=day.more|length trimmed %}
+                                        {{ count }} more routine
+                                    {% plural %}
+                                        {{ count }} more routines
+                                    {% endblocktranslate %}
+                                </summary>
+                                {% for unit in day.more %}
+                                    {% include 'teams/_agenda_unit.html' %}
+                                {% endfor %}
+                            </details>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ol>
+        </div>
+        <script>
+            // Start at the next training instead of the oldest one
+            (function () {
+                var next = document.querySelector('.alp-agenda [data-alp-upcoming]');
+                if (next) {
+                    next.closest('.alp-agenda').scrollLeft = next.offsetLeft - next.parentElement.offsetLeft;
+                }
+            })();
+        </script>
+    {% else %}
+        <p class="alp-card text-muted mb-4">{% translate "No training is planned for the team in these weeks." %}</p>
+    {% endif %}
 
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
         <h4 class="mb-0">{% translate "Programs" %}</h4>
@@ -67,17 +131,15 @@
                 {% for membership in memberships %}
                     <tr>
                         <td>
-                            {{ membership.user.username }}
                             {% if membership.status == 'invited' %}
+                                {{ membership.user.username }}
                                 <span class="badge text-bg-warning">{% translate "Invited" %}</span>
+                            {% else %}
+                                <a href="{% url 'teams:member-detail' team.pk membership.pk %}">{{ membership.user.username }}</a>
                             {% endif %}
                         </td>
                         <td>
-                            {% if membership.role == 'coach' %}
-                                {% translate "Coach" %}
-                            {% else %}
-                                {% translate "Athlete" %}
-                            {% endif %}
+                            {% include 'teams/_role_tag.html' with role=membership.role %}
                         </td>
                         <td class="text-end">
                             <form method="post" class="d-inline"

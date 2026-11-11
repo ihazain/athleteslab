@@ -1,0 +1,89 @@
+{% extends "base_wide.html" %}
+{% load i18n static %}
+
+{% block title %}{{ member.get_full_name|default:member.username }}{% endblock %}
+
+{% block header %}
+    <link rel="stylesheet" type="text/css" href="{% static 'teams/brand/pages.css' %}">
+{% endblock %}
+
+
+{% block content %}
+    <p><a href="{% url 'teams:team-detail' team.pk %}">&laquo; {{ team.name }}</a></p>
+
+    <div class="alp-card mb-4">
+        {% if member.get_full_name %}
+            <div class="text-muted">{{ member.username }}</div>
+        {% endif %}
+        <div class="d-flex flex-wrap gap-2 mt-1">
+            {% include 'teams/_role_tag.html' with role=membership.role %}
+            <span class="alp-tag">{{ team.name }}</span>
+            {% for group in groups %}
+                <span class="alp-tag">{{ group.name }}</span>
+            {% endfor %}
+        </div>
+    </div>
+
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h4 class="mb-0">
+            {{ start|date:"SHORT_DATE_FORMAT" }} &ndash; {{ end|date:"SHORT_DATE_FORMAT" }}
+        </h4>
+        <div class="btn-group">
+            <a class="btn btn-light btn-sm" href="?date={{ previous|date:'Y-m-d' }}">
+                &laquo; {% translate "Previous week" %}
+            </a>
+            <a class="btn btn-light btn-sm" href="{% url 'teams:member-detail' team.pk membership.pk %}">{% translate "Today" %}</a>
+            <a class="btn btn-light btn-sm" href="?date={{ next|date:'Y-m-d' }}">
+                {% translate "Next week" %} &raquo;
+            </a>
+        </div>
+    </div>
+    {% include 'calendar/_week_grid.html' %}
+    <p class="text-muted small">
+        {% translate "Only programs assigned in your teams and the sessions done for them are shown." %}
+    </p>
+
+
+    <h4 class="mt-4">{% translate "Programs" %}</h4>
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">{% translate "Program" %}</th>
+                    <th scope="col">{% translate "Period" %}</th>
+                    <th scope="col">{% translate "Training sessions" %}</th>
+                    <th scope="col">{% translate "Last activity" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in programs %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'teams:assignment-detail' row.assignment.pk %}" class="fw-bold">
+                                {{ row.assignment.template.name|default:_("Deleted plan") }}
+                            </a>
+                            {% if not row.assigned.routine %}
+                                <span class="badge text-bg-secondary">{% translate "Deleted by the athlete" %}</span>
+                            {% endif %}
+                            {% if row.assignment.archived_at %}
+                                <span class="badge text-bg-warning">{% translate "Withdrawn" %}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ row.assignment.start_date|date:"SHORT_DATE_FORMAT" }}
+                            &ndash;
+                            {{ row.assignment.end_date|date:"SHORT_DATE_FORMAT" }}
+                        </td>
+                        <td>{{ row.sessions }}</td>
+                        <td>{{ row.last_activity|date:"SHORT_DATE_FORMAT"|default:"-/-" }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="4">{% translate "No programs were assigned in your teams yet." %}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
