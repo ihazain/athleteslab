@@ -11,9 +11,12 @@
 {% block content %}
     {% include 'training/_tabs.html' %}
 
-    <p class="text-muted">
-        {% translate "A routine is the training of a single day. Routines are part of a plan or a program and are edited there." %}
-    </p>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <p class="text-muted mb-0">
+            {% translate "A routine is the training of a single day. Routines are part of a plan or a program and are edited there." %}
+        </p>
+        <a class="btn btn-primary btn-sm" href="{% url 'training:routine-new' %}">{% translate "New routine" %}</a>
+    </div>
 
     <ul class="list-unstyled alp-cards">
         {% for day in days %}

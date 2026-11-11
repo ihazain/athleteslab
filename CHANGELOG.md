@@ -23,6 +23,10 @@ top bar, and the opened menu now sits below the logo instead of beside it.
   program then opens in the editor.
 * A program, also an assigned one, can be at most 120 days long, like in the
   editor.
+* A "New" button on top of the menu creates a program, a plan or a routine
+  from every page. "New plan" builds a plan from an existing plan, single
+  routines or both. "New routine" adds an empty or copied routine to one of
+  your programs, or to a new program, and opens it in the editor.
 * New Calendar page with a week view (planned routine and sessions done per
   day), a timeline of the programs over twelve weeks and a year view.
 * Teams is its own entry in the menu. For coaches the page starts with a

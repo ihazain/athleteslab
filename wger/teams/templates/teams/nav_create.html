@@ -1,0 +1,24 @@
+{% load i18n wger_extras %}
+{% if user.is_authenticated %}
+    <li class="nav-item dropdown alp-create">
+        <a href="{% url 'training:program-new' %}" rel="nofollow" class="nav-link dropdown-toggle text-white"
+           data-bs-toggle="dropdown"><span class="{% fa_class 'plus' %} alp-nav-icon" aria-hidden="true"></span>{% translate "New" %} <b class="caret"></b></a>
+        <ul class="dropdown-menu">
+            <li>
+                <a class="dropdown-item" href="{% url 'training:program-new' %}" rel="nofollow">
+                    {% translate "New program" %}
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item" href="{% url 'training:plan-new' %}" rel="nofollow">
+                    {% translate "New plan" %}
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item" href="{% url 'training:routine-new' %}" rel="nofollow">
+                    {% translate "New routine" %}
+                </a>
+            </li>
+        </ul>
+    </li>
+{% endif %}

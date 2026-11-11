@@ -25,5 +25,7 @@ urlpatterns = [
     path('', training.programs, name='programs'),
     path('programs/new', training.program_new, name='program-new'),
     path('plans', training.plans, name='plans'),
+    path('plans/new', training.plan_new, name='plan-new'),
+    path('routines/new', training.routine_new, name='routine-new'),
     path('routines', training.routines, name='routines'),
 ]

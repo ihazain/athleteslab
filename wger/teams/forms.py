@@ -191,10 +191,23 @@ class RoutineChoiceField(forms.ModelMultipleChoiceField):
         }
 
 
+def own_routines(user):
+    """
+    The single training days of the user's plans and programs, programs first.
+    """
+    return (
+        Day.objects.filter(routine__user=user, is_rest=False)
+        .select_related('routine')
+        .order_by('routine__is_template', 'routine__name', 'routine__pk', 'order', 'pk')
+    )
+
+
 class NewProgramForm(forms.Form):
     """
     A new program from an existing plan, from single routines, or from both.
     """
+
+    with_period = True
 
     def __init__(self, *args, user, **kwargs):
         super().__init__(*args, **kwargs)
@@ -204,14 +217,15 @@ class NewProgramForm(forms.Form):
             max_length=Routine._meta.get_field('name').max_length,
         )
 
-        today = timezone.now().astimezone(user.userprofile.zone_info).date()
-        date_widget = {'widget': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d')}
-        self.fields['start_date'] = forms.DateField(
-            label=_('Start date'), initial=today, **date_widget
-        )
-        self.fields['end_date'] = forms.DateField(
-            label=_('End date'), initial=today + datetime.timedelta(days=27), **date_widget
-        )
+        if self.with_period:
+            today = timezone.now().astimezone(user.userprofile.zone_info).date()
+            date_widget = {'widget': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d')}
+            self.fields['start_date'] = forms.DateField(
+                label=_('Start date'), initial=today, **date_widget
+            )
+            self.fields['end_date'] = forms.DateField(
+                label=_('End date'), initial=today + datetime.timedelta(days=27), **date_widget
+            )
 
         self.fields['plan'] = TemplateChoiceField(
             label=_('Start from a plan'),
@@ -221,13 +235,11 @@ class NewProgramForm(forms.Form):
             .order_by('name', 'pk'),
             required=False,
             empty_label=_('No plan'),
-            help_text=_('All routines of the plan are copied into the program.'),
+            help_text=_('All routines of the plan are copied.'),
         )
         self.fields['routines'] = RoutineChoiceField(
             label=_('Add single routines'),
-            queryset=Day.objects.filter(routine__user=user, is_rest=False)
-            .select_related('routine')
-            .order_by('routine__is_template', 'routine__name', 'routine__pk', 'order', 'pk'),
+            queryset=own_routines(user),
             required=False,
             widget=forms.CheckboxSelectMultiple,
             help_text=_('Copies of these routines are added after the ones of the plan.'),
@@ -241,3 +253,60 @@ class NewProgramForm(forms.Form):
         if not self.errors and not cleaned.get('plan') and not cleaned.get('routines'):
             raise forms.ValidationError(_('Pick a plan or at least one routine.'))
         return cleaned
+
+
+class NewPlanForm(NewProgramForm):
+    """
+    A new plan from an existing plan, from single routines, or from both. Plans have no period.
+    """
+
+    with_period = False
+
+
+class SourceRoutineField(forms.ModelChoiceField):
+    def label_from_instance(self, obj: Day) -> str:
+        return _('%(routine)s (from %(parent)s)') % {
+            'routine': obj.name or _('Unnamed routine'),
+            'parent': obj.routine.name,
+        }
+
+
+class NewRoutineForm(forms.Form):
+    """
+    A new routine (training day), empty or as a copy, inside one of the user's programs.
+    """
+
+    NEW_PROGRAM = 'new'
+
+    def __init__(self, *args, user, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields['name'] = forms.CharField(
+            label=_('Name'),
+            max_length=Day._meta.get_field('name').max_length,
+        )
+        self.fields['source'] = SourceRoutineField(
+            label=_('Copy from a routine'),
+            queryset=own_routines(user),
+            required=False,
+            empty_label=_('Empty routine'),
+        )
+
+        self.programs = {
+            str(program.pk): program
+            for program in Routine.objects.filter(user=user, is_template=False).order_by(
+                '-start', '-pk'
+            )
+        }
+        self.fields['program'] = forms.ChoiceField(
+            label=_('Add to program'),
+            choices=[(self.NEW_PROGRAM, _('A new program for this routine'))]
+            + [(key, program.name) for key, program in self.programs.items()],
+            help_text=_('A routine always belongs to a program. Plans cannot be changed.'),
+        )
+
+    def target_program(self) -> Routine | None:
+        """
+        The chosen program, or None for a new one.
+        """
+        return self.programs.get(self.cleaned_data['program'])

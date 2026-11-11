@@ -322,3 +322,126 @@ class TrainingPagesTestCase(WgerTestCase):
             self.assertEqual(response.status_code, 302)
             self.assertIn('login', response.url)
         self.assertEqual(Routine.objects.count(), count)
+
+    # --- New plan and new routine ---
+
+    def test_new_plan(self):
+        """
+        Posting routines creates a plan (a private template) with copies of them and opens
+        it. Without a source the form shows an error. The Plans tab links to the form.
+        """
+        url = reverse('training:plan-new')
+        self.assertContains(self.client.get(reverse('training:plans')), url)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn('start_date', response.context['form'].fields)
+
+        count = Routine.objects.count()
+        response = self.client.post(url, {'name': 'Nothing'})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['form'].errors)
+        self.assertEqual(Routine.objects.count(), count)
+
+        response = self.client.post(
+            url, {'name': 'Built plan', 'routines': [self.upper.pk, self.plan_day.pk]}
+        )
+        plan = Routine.objects.get(name='Built plan')
+        self.assertRedirects(
+            response,
+            reverse('manager:template:view', kwargs={'pk': plan.pk}),
+            fetch_redirect_response=False,
+        )
+        self.assertTrue(plan.is_template)
+        self.assertFalse(plan.is_public)
+        self.assertEqual(plan.user, self.user)
+        self.assertEqual(
+            [day.name for day in plan.days.order_by('order')], ['Upper body', 'Plan day A']
+        )
+        self.assertIn(plan, self.client.get(reverse('training:plans')).context['plans'])
+
+    def test_new_routine_form_offers_own_programs_and_routines(self):
+        """
+        The form offers a new program or the own programs as target, no plans and nothing
+        of other users, and the own routines as source. The Routines tab links to it.
+        """
+        url = reverse('training:routine-new')
+        self.assertContains(self.client.get(reverse('training:routines')), url)
+
+        form = self.client.get(url).context['form']
+
+        self.assertEqual(
+            [key for key, label in form.fields['program'].choices],
+            ['new', str(self.upcoming.pk), str(self.current.pk), str(self.finished.pk)],
+        )
+        self.assertEqual(
+            [day.name for day in form.fields['source'].queryset],
+            ['Upper body', 'Plan day A', 'Plan day B'],
+        )
+
+    def test_new_routine(self):
+        """
+        A routine is created empty in a new program, or as a copy inside an own program,
+        and the program opens in the editor.
+        """
+        url = reverse('training:routine-new')
+
+        response = self.client.post(url, {'name': 'Sprint session', 'program': 'new'})
+        day = Day.objects.get(name='Sprint session')
+        self.assertRedirects(
+            response,
+            reverse('manager:routine:edit', kwargs={'pk': day.routine_id}),
+            fetch_redirect_response=False,
+        )
+        self.assertEqual((day.routine.user, day.routine.name), (self.user, 'Sprint session'))
+        self.assertFalse(day.routine.is_template)
+
+        response = self.client.post(
+            url, {'name': 'Upper copy', 'program': self.upcoming.pk, 'source': self.upper.pk}
+        )
+        day = Day.objects.get(name='Upper copy')
+        self.assertEqual(day.routine, self.upcoming)
+        self.assertEqual(day.slots.count(), 2)
+        self.assertEqual(self.upper.slots.count(), 2)
+        self.assertRedirects(
+            response,
+            reverse('manager:routine:edit', kwargs={'pk': self.upcoming.pk}),
+            fetch_redirect_response=False,
+        )
+
+    def test_new_routine_invalid_input_creates_nothing(self):
+        """
+        A plan or a program of another user as target, a routine of another user as source,
+        a missing or too long name show the form again and create nothing.
+        """
+        foreign_day = Day.objects.get(name='Foreign day')
+        counts = (Day.objects.count(), Routine.objects.count())
+        cases = (
+            {'name': 'x', 'program': self.plan.pk},
+            {'name': 'x', 'program': self.foreign.pk},
+            {'name': 'x', 'program': 'abc'},
+            {'name': 'x'},
+            {'name': 'x', 'program': 'new', 'source': foreign_day.pk},
+            {'name': '', 'program': 'new'},
+            {'name': 'x' * 21, 'program': 'new'},
+        )
+        for data in cases:
+            response = self.client.post(reverse('training:routine-new'), data)
+            self.assertEqual(response.status_code, 200, data)
+            self.assertTrue(response.context['form'].errors, data)
+
+        self.assertEqual((Day.objects.count(), Routine.objects.count()), counts)
+
+    def test_new_plan_and_routine_need_login(self):
+        """
+        Anonymous users are sent to the login and create nothing.
+        """
+        self.client.logout()
+        counts = (Day.objects.count(), Routine.objects.count())
+        for name, data in (
+            ('training:plan-new', {'name': 'x', 'routines': [self.upper.pk]}),
+            ('training:routine-new', {'name': 'x', 'program': 'new'}),
+        ):
+            for response in (self.client.get(reverse(name)), self.client.post(reverse(name), data)):
+                self.assertEqual(response.status_code, 302, name)
+                self.assertIn('login', response.url)
+        self.assertEqual((Day.objects.count(), Routine.objects.count()), counts)

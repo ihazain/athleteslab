@@ -38,9 +38,17 @@ from wger.manager.models import (
     Routine,
 )
 from wger.teams.calendar import user_today
-from wger.teams.forms import NewProgramForm
+from wger.teams.forms import (
+    NewPlanForm,
+    NewProgramForm,
+    NewRoutineForm,
+)
 from wger.teams.models import AssignedRoutine
-from wger.teams.services import create_program
+from wger.teams.services import (
+    add_routine,
+    create_plan,
+    create_program,
+)
 
 
 def _weeks(routine: Routine) -> int:
@@ -147,3 +155,47 @@ def program_new(request):
             return redirect('manager:routine:edit', pk=program.pk)
 
     return render(request, 'training/program_new.html', {'tab': 'programs', 'form': form})
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def plan_new(request):
+    """
+    Create a plan from an existing plan and/or single routines.
+    """
+    form = NewPlanForm(request.POST or None, user=request.user)
+    if request.method == 'POST' and form.is_valid():
+        try:
+            plan = create_plan(
+                user=request.user,
+                name=form.cleaned_data['name'],
+                plan=form.cleaned_data['plan'],
+                days=form.cleaned_data['routines'],
+            )
+        except ValidationError as exc:
+            form.add_error(None, exc.messages)
+        else:
+            messages.success(request, _('The plan was created.'))
+            return redirect('manager:template:view', pk=plan.pk)
+
+    return render(request, 'training/plan_new.html', {'tab': 'plans', 'form': form})
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def routine_new(request):
+    """
+    Create a routine in one of the user's programs, then open that program in the editor.
+    """
+    form = NewRoutineForm(request.POST or None, user=request.user)
+    if request.method == 'POST' and form.is_valid():
+        day = add_routine(
+            user=request.user,
+            name=form.cleaned_data['name'],
+            program=form.target_program(),
+            source=form.cleaned_data['source'],
+        )
+        messages.success(request, _('The routine was created. Add its exercises here.'))
+        return redirect('manager:routine:edit', pk=day.routine_id)
+
+    return render(request, 'training/routine_new.html', {'tab': 'routines', 'form': form})

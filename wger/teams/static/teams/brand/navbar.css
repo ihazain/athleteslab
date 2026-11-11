@@ -113,6 +113,12 @@
     display: none;
 }
 
+/* The "New" entry keeps its plus sign everywhere */
+.alp-navbar .alp-create .alp-nav-icon {
+    display: inline-block;
+    margin-right: 0.4rem;
+}
+
 /* Button that folds the sidebar, only there on desktop */
 .alp-sidebar-toggle {
     display: none;
@@ -269,6 +275,37 @@
         display: none;
     }
 
+    /* "New" is a button on top that opens its three entries on click */
+    .alp-navbar .navbar-nav.me-auto > .nav-item.alp-create > .nav-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 0 0.5rem;
+        padding: 0.5rem 0.6rem;
+        color: #0b0b0d !important;
+        background: #fff;
+        border-radius: 0.6rem;
+        font-size: 0.92rem;
+        font-weight: 600;
+        letter-spacing: 0;
+        text-transform: none;
+        pointer-events: auto;
+    }
+
+    .alp-navbar .navbar-nav.me-auto > .nav-item.alp-create > .nav-link:hover,
+    .alp-navbar .navbar-nav.me-auto > .nav-item.alp-create > .nav-link.show {
+        color: #0b0b0d !important;
+        background: rgba(255, 255, 255, 0.85);
+    }
+
+    .alp-navbar .navbar-nav.me-auto > .nav-item.alp-create > .dropdown-menu:not(.show) {
+        display: none;
+    }
+
+    .alp-navbar .navbar-nav.me-auto > .nav-item.alp-create > .dropdown-menu {
+        margin-bottom: 0.5rem;
+    }
+
     /* The last section ("About this software") stays a menu that opens on click */
     .alp-navbar .navbar-nav.me-auto > .nav-item:last-child > .nav-link,
     .alp-navbar .navbar-nav.me-auto > .nav-item:last-child > .nav-link.text-decoration-underline {
@@ -422,6 +459,18 @@
     .alp-sidebar-collapsed .alp-navbar .alp-nav-icon {
         display: inline-block;
         font-size: 1.15rem;
+    }
+
+    .alp-sidebar-collapsed .alp-navbar .alp-create .alp-nav-icon {
+        margin-right: 0;
+    }
+
+    .alp-sidebar-collapsed .alp-navbar .navbar-nav.me-auto > .nav-item.alp-create > .nav-link,
+    .alp-sidebar-collapsed .alp-navbar .navbar-nav.me-auto > .nav-item.alp-create > .nav-link:hover,
+    .alp-sidebar-collapsed .alp-navbar .navbar-nav.me-auto > .nav-item.alp-create > .nav-link.show {
+        margin: 0 0 0.3rem;
+        color: #0b0b0d !important;
+        background: #fff;
     }
 
     .alp-sidebar-collapsed .alp-navbar .navbar-nav .dropdown-menu,

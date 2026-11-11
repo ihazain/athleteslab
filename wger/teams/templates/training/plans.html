@@ -15,7 +15,10 @@
         <p class="text-muted mb-0">
             {% translate "A plan is a set of routines for several days that you can reuse. Coaches assign plans to their teams." %}
         </p>
-        <a class="btn btn-light btn-sm" href="{% url 'manager:template:public' %}">{% translate "Public plans" %}</a>
+        <span>
+            <a class="btn btn-primary btn-sm" href="{% url 'training:plan-new' %}">{% translate "New plan" %}</a>
+            <a class="btn btn-light btn-sm" href="{% url 'manager:template:public' %}">{% translate "Public plans" %}</a>
+        </span>
     </div>
 
     <ul class="list-unstyled alp-cards">

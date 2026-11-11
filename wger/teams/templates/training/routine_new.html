@@ -1,0 +1,27 @@
+{% extends "base_wide.html" %}
+{% load i18n static crispy_forms_tags %}
+
+{% block title %}{% translate "New routine" %}{% endblock %}
+
+{% block header %}
+    <link rel="stylesheet" type="text/css" href="{% static 'teams/brand/pages.css' %}">
+{% endblock %}
+
+
+{% block content %}
+    <p><a href="{% url 'training:routines' %}">&laquo; {% translate "Routines" %}</a></p>
+
+    <p class="text-muted">
+        {% blocktranslate trimmed %}
+            A routine is the training of a single day. Start with an empty one or copy an
+            existing routine. Afterwards its program opens in the editor, where you add the
+            exercises.
+        {% endblocktranslate %}
+    </p>
+
+    <form method="post" action="{% url 'training:routine-new' %}" class="alp-form">
+        {% csrf_token %}
+        {{ form|crispy }}
+        <button type="submit" class="btn btn-primary">{% translate "Create routine" %}</button>
+    </form>
+{% endblock %}

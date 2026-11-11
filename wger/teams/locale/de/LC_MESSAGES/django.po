@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: athleteslab teams\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-11 16:09+0100\n"
+"POT-Creation-Date: 2026-11-11 20:08+0100\n"
 "PO-Revision-Date: 2026-11-11 16:09+0100\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
@@ -72,8 +72,8 @@ msgstr "Mit einem Plan beginnen"
 msgid "No plan"
 msgstr "Kein Plan"
 
-msgid "All routines of the plan are copied into the program."
-msgstr "Alle Routinen des Plans werden in das Programm kopiert."
+msgid "All routines of the plan are copied."
+msgstr "Alle Routinen des Plans werden kopiert."
 
 msgid "Add single routines"
 msgstr "Einzelne Routinen hinzufügen"
@@ -83,6 +83,23 @@ msgstr "Kopien dieser Routinen werden nach denen des Plans angefügt."
 
 msgid "Pick a plan or at least one routine."
 msgstr "Wähle einen Plan oder mindestens eine Routine."
+
+msgid "Copy from a routine"
+msgstr "Von einer Routine kopieren"
+
+msgid "Empty routine"
+msgstr "Leere Routine"
+
+msgid "Add to program"
+msgstr "Zum Programm hinzufügen"
+
+msgid "A new program for this routine"
+msgstr "Ein neues Programm für diese Routine"
+
+msgid "A routine always belongs to a program. Plans cannot be changed."
+msgstr ""
+"Eine Routine gehört immer zu einem Programm. Pläne können nicht geändert "
+"werden."
 
 #, python-format
 msgid "A program cannot be longer than %(days)d days."
@@ -276,6 +293,18 @@ msgstr ""
 msgid "Withdraw assignment"
 msgstr "Zuweisung zurückziehen"
 
+msgid "New"
+msgstr "Neu"
+
+msgid "New program"
+msgstr "Neues Programm"
+
+msgid "New plan"
+msgstr "Neuer Plan"
+
+msgid "New routine"
+msgstr "Neue Routine"
+
 msgid "Dashboard"
 msgstr "Übersicht"
 
@@ -466,6 +495,21 @@ msgid "Training"
 msgstr "Training"
 
 msgid ""
+"A plan is a set of routines you can reuse and, as a coach, assign to a team."
+" Build it from an existing plan, single routines, or both. Everything is "
+"copied. A plan cannot be changed afterwards: to change it, make a program "
+"from it, adjust that and save it as a new plan."
+msgstr ""
+"Ein Plan ist ein Satz von Routinen, den du wiederverwenden und als Coach "
+"einem Team zuweisen kannst. Erstelle ihn aus einem bestehenden Plan, aus "
+"einzelnen Routinen oder aus beidem. Alles wird kopiert. Ein Plan kann danach"
+" nicht mehr geändert werden: Um ihn zu ändern, erstelle ein Programm daraus,"
+" passe es an und speichere es als neuen Plan."
+
+msgid "Create plan"
+msgstr "Plan erstellen"
+
+msgid ""
 "A plan is a set of routines for several days that you can reuse. Coaches "
 "assign plans to their teams."
 msgstr ""
@@ -484,9 +528,6 @@ msgid_plural "%(count)s routines"
 msgstr[0] "%(count)s Routine"
 msgstr[1] "%(count)s Routinen"
 
-msgid "New program"
-msgstr "Neues Programm"
-
 msgid ""
 "Build the program from what you already have: pick a plan, single routines, "
 "or both. Everything is copied, so the originals stay as they are. Afterwards"
@@ -496,7 +537,6 @@ msgstr ""
 "Routinen oder beides. Alles wird kopiert, die Originale bleiben unverändert."
 " Danach öffnet sich das Programm im Editor, wo du es ändern kannst."
 
-#| msgid "New program"
 msgid "Create program"
 msgstr "Programm erstellen"
 
@@ -525,6 +565,18 @@ msgstr "Zugewiesen in %(team)s"
 
 msgid "You have no programs yet."
 msgstr "Du hast noch keine Programme."
+
+msgid ""
+"A routine is the training of a single day. Start with an empty one or copy "
+"an existing routine. Afterwards its program opens in the editor, where you "
+"add the exercises."
+msgstr ""
+"Eine Routine ist das Training eines einzelnen Tages. Beginne mit einer "
+"leeren oder kopiere eine bestehende Routine. Danach öffnet sich ihr Programm"
+" im Editor, wo du die Übungen hinzufügst."
+
+msgid "Create routine"
+msgstr "Routine erstellen"
 
 msgid ""
 "A routine is the training of a single day. Routines are part of a plan or a "
@@ -607,6 +659,11 @@ msgstr ""
 "Die Zuweisung wurde zurückgezogen. Die Athleten behalten ihre Programme und "
 "Protokolle."
 
-#| msgid "The team was created. Invite your athletes now."
 msgid "The program was created. You can adjust it here."
 msgstr "Das Programm wurde erstellt. Du kannst es hier anpassen."
+
+msgid "The plan was created."
+msgstr "Der Plan wurde erstellt."
+
+msgid "The routine was created. Add its exercises here."
+msgstr "Die Routine wurde erstellt. Füge hier ihre Übungen hinzu."

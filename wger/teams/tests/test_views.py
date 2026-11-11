@@ -266,7 +266,12 @@ class BrandTestCase(WgerTestCase):
         self.assertContains(response, 'class="alp-sidebar-toggle"', count=1)
         self.assertContains(response, 'data-label-expand="Expand menu"')
         # One icon per section of the menu and one for the account
-        self.assertContains(response, 'alp-nav-icon', count=7)
+        self.assertContains(response, 'alp-nav-icon', count=8)
+        # The universal plus with its three entries comes first in the menu
+        for name in ('program-new', 'plan-new', 'routine-new'):
+            self.assertContains(response, reverse(f'training:{name}'))
+        content = response.content.decode()
+        self.assertLess(content.index('alp-create'), content.index('fa-dumbbell'))
         self.assertContains(response, 'fa-circle-user fa-fw alp-nav-icon')
         self.assertNotContains(response, 'wger logo')
 

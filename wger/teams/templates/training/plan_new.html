@@ -1,0 +1,28 @@
+{% extends "base_wide.html" %}
+{% load i18n static crispy_forms_tags %}
+
+{% block title %}{% translate "New plan" %}{% endblock %}
+
+{% block header %}
+    <link rel="stylesheet" type="text/css" href="{% static 'teams/brand/pages.css' %}">
+{% endblock %}
+
+
+{% block content %}
+    <p><a href="{% url 'training:plans' %}">&laquo; {% translate "Plans" %}</a></p>
+
+    <p class="text-muted">
+        {% blocktranslate trimmed %}
+            A plan is a set of routines you can reuse and, as a coach, assign to a team.
+            Build it from an existing plan, single routines, or both. Everything is copied.
+            A plan cannot be changed afterwards: to change it, make a program from it,
+            adjust that and save it as a new plan.
+        {% endblocktranslate %}
+    </p>
+
+    <form method="post" action="{% url 'training:plan-new' %}" class="alp-form">
+        {% csrf_token %}
+        {{ form|crispy }}
+        <button type="submit" class="btn btn-primary">{% translate "Create plan" %}</button>
+    </form>
+{% endblock %}

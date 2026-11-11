@@ -53,8 +53,10 @@ from wger.teams.models import (
     TeamMembership,
 )
 from wger.teams.services import (
+    add_routine,
     assign_program,
     copy_routine,
+    create_plan,
     create_program,
 )
 
@@ -1035,3 +1037,115 @@ class CopyRoutineTestCase(WgerTestCase):
             self.new_program(days=days)
 
         self.assertEqual(len(big), len(small))
+
+    # --- create_plan and add_routine ---
+
+    def test_plan_from_routines(self):
+        """
+        A plan from routines is a private template of the user with copies of the routines.
+        Without a source nothing is created.
+        """
+        push, pull = self.own_routine('Source', 'Push', 'Pull')
+
+        plan = create_plan(user=self.athlete, name='My plan', days=[pull, push])
+
+        self.assertTrue(plan.is_template)
+        self.assertFalse(plan.is_public)
+        self.assertEqual((plan.user, plan.name), (self.athlete, 'My plan'))
+        self.assertEqual([d.name for d in plan.days.order_by('order')], ['Pull', 'Push'])
+        self.assertEqual(push.routine.days.count(), 2)
+
+        count = Routine.objects.count()
+        with self.assertRaises(ValidationError):
+            create_plan(user=self.athlete, name='Empty')
+        self.assertEqual(Routine.objects.count(), count)
+
+    def test_plan_from_plan_is_a_template(self):
+        """
+        A plan made from another plan is a template again, not a program.
+        """
+        self.add_day(1, entries=1)
+        plan = create_plan(user=self.athlete, name='Copy', plan=self.template)
+
+        self.assertTrue(plan.is_template)
+        self.assertFalse(plan.is_public)
+        self.assertEqual(plan.user, self.athlete)
+        self.assertEqual(plan.days.count(), 1)
+
+    def test_add_empty_routine_to_program(self):
+        """
+        An empty routine is appended to the own program and shows up in its schedule, which
+        was cached before.
+        """
+        push, pull = self.own_routine('Source', 'Push', 'Pull')
+        program = push.routine
+        self.assertEqual({d.day.name for d in program.date_sequence if d.day}, {'Push', 'Pull'})
+
+        day = add_routine(user=self.athlete, name='Legs', program=program)
+
+        self.assertEqual((day.routine, day.name, day.order), (program, 'Legs', 3))
+        self.assertFalse(day.is_rest)
+        self.assertEqual(day.slots.count(), 0)
+        program.refresh_from_db()
+        self.assertEqual(
+            {d.day.name for d in program.date_sequence if d.day}, {'Push', 'Pull', 'Legs'}
+        )
+
+    def test_add_copied_routine_to_program(self):
+        """
+        A routine copied from an own routine has its content and the new name, the schedule
+        of the program is refreshed and the source stays untouched.
+        """
+        (source,) = self.own_routine('Source', 'Push')
+        (other,) = self.own_routine('Target', 'Pull')
+        program = other.routine
+        list(program.date_sequence)
+        before = self.day_content(source)
+
+        day = add_routine(user=self.athlete, name='Push heavy', program=program, source=source)
+
+        self.assertEqual((day.routine, day.name, day.order), (program, 'Push heavy', 2))
+        self.assertEqual(self.day_content(day)[1:], before[1:])
+        self.assertNotEqual(day.pk, source.pk)
+        self.assertEqual(self.day_content(source), before)
+        self.assertEqual(source.routine.days.count(), 1)
+        self.assertEqual(
+            {d.day.name for d in program.date_sequence if d.day}, {'Pull', 'Push heavy'}
+        )
+
+    def test_add_routine_creates_a_program_if_none_is_given(self):
+        """
+        Without a program the routine gets a new four-week program of the user with its name.
+        """
+        day = add_routine(user=self.athlete, name='Solo session')
+
+        program = day.routine
+        self.assertEqual((program.user, program.name), (self.athlete, 'Solo session'))
+        self.assertFalse(program.is_template)
+        self.assertEqual((program.end - program.start).days, 27)
+        self.assertEqual([d.name for d in program.days.all()], ['Solo session'])
+
+    def test_add_routine_only_to_own_programs_and_from_own_routines(self):
+        """
+        Programs of others, plans (also own ones) and routines of others are refused,
+        nothing is created.
+        """
+        (own_day,) = self.own_routine('Source', 'Push')
+        own_plan = create_plan(user=self.athlete, name='Own plan', days=[own_day])
+        foreign_program = Routine.objects.create(
+            user=self.coach, name='Coach program', start=self.start, end=self.end
+        )
+        foreign_day = Day.objects.create(routine=foreign_program, order=1, name='Coach day')
+        days, routines = Day.objects.count(), Routine.objects.count()
+
+        for kwargs in (
+            {'program': foreign_program},
+            {'program': own_plan},
+            {'program': self.template},
+            {'program': own_day.routine, 'source': foreign_day},
+            {'source': foreign_day},
+        ):
+            with self.assertRaises(PermissionDenied):
+                add_routine(user=self.athlete, name='Nope', **kwargs)
+
+        self.assertEqual((Day.objects.count(), Routine.objects.count()), (days, routines))

@@ -28,7 +28,9 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 
 # wger
+from wger.manager.helpers import reset_routine_cache
 from wger.manager.models import (
+    Day,
     MaxRepetitionsConfig,
     MaxRestConfig,
     MaxRiRConfig,
@@ -163,13 +165,23 @@ def _check_period(start_date: datetime.date, end_date: datetime.date) -> None:
         )
 
 
-def create_program(*, user, name: str, start_date, end_date, plan=None, days=()):
+def create_program(
+    *,
+    user,
+    name: str,
+    start_date,
+    end_date,
+    plan=None,
+    days=(),
+    is_template: bool = False,
+):
     """
     Create a program for the user from an existing plan, single routines (days) or both.
 
     The plan may be an own routine or a public template, the days must be the
     user's own. Everything is copied: the program starts with the days of the
-    plan, followed by the chosen days in the order given.
+    plan, followed by the chosen days in the order given. With ``is_template``
+    the result is a plan (a reusable template) instead of a program.
     """
     _check_period(start_date, end_date)
     days = list(days)
@@ -184,13 +196,15 @@ def create_program(*, user, name: str, start_date, end_date, plan=None, days=())
         if plan is not None:
             program = copy_routine(plan, user, start_date, end_date)
             program.name = name
-            program.save(update_fields=['name'])
+            program.is_template = is_template
+            program.save(update_fields=['name', 'is_template'])
         else:
             program = Routine.objects.create(
                 user=user,
                 name=name,
                 start=start_date,
                 end=end_date,
+                is_template=is_template,
             )
 
         if days:
@@ -198,6 +212,69 @@ def create_program(*, user, name: str, start_date, end_date, plan=None, days=())
             copy_days(days, program, user, first_order=last + 1)
 
     return program
+
+
+def default_period(user) -> tuple[datetime.date, datetime.date]:
+    """
+    Four weeks from today in the time zone of the user.
+    """
+    today = timezone.now().astimezone(user.userprofile.zone_info).date()
+    return today, today + datetime.timedelta(days=27)
+
+
+def create_plan(*, user, name: str, plan=None, days=()):
+    """
+    Create a plan (a reusable template) from an existing plan, single routines or both.
+    """
+    start_date, end_date = default_period(user)
+    return create_program(
+        user=user,
+        name=name,
+        start_date=start_date,
+        end_date=end_date,
+        plan=plan,
+        days=days,
+        is_template=True,
+    )
+
+
+def add_routine(*, user, name: str, program=None, source=None) -> Day:
+    """
+    Add a routine (a training day) to one of the user's programs.
+
+    Without ``program`` a new four-week program with the name of the routine
+    is created for it. With ``source`` the routine is a copy of that own
+    routine, otherwise it is empty. Plans are frozen and cannot take routines.
+    """
+    if program is not None and (program.user_id != user.pk or program.is_template):
+        raise PermissionDenied('The user may only add routines to own programs.')
+    if source is not None and source.routine.user_id != user.pk:
+        raise PermissionDenied('The user may only use own routines.')
+
+    with transaction.atomic():
+        if program is None:
+            start_date, end_date = default_period(user)
+            max_length = Routine._meta.get_field('name').max_length
+            program = Routine.objects.create(
+                user=user,
+                name=name[:max_length],
+                start=start_date,
+                end=end_date,
+            )
+
+        last = program.days.order_by('-order').values_list('order', flat=True).first() or 0
+        if source is not None:
+            copy_days([source], program, user, first_order=last + 1)
+            day = program.days.get(order=last + 1)
+            day.name = name
+            day.is_rest = False
+            day.save(update_fields=['name', 'is_rest'])
+        else:
+            day = Day.objects.create(routine=program, order=last + 1, name=name)
+
+    # The copy is written without signals, the cached schedule of the program is stale
+    reset_routine_cache(program)
+    return day
 
 
 def _can_use_template(user, template):
