@@ -1,0 +1,212 @@
+#  This file is part of wger Workout Manager <https://github.com/wger-project>.
+#  Copyright (C) 2013 - 2021 wger Team
+#
+#  wger Workout Manager is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  wger Workout Manager is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Standard Library
+import datetime
+from unittest import mock
+
+# Django
+from django.contrib.auth.models import User
+from django.urls import reverse
+
+# wger
+from wger.core.models import (
+    RepetitionUnit,
+    WeightUnit,
+)
+from wger.core.tests.base_testcase import WgerTestCase
+from wger.manager.models import (
+    Day,
+    Routine,
+    Slot,
+    SlotEntry,
+)
+from wger.teams.models import (
+    Team,
+    TeamMembership,
+)
+from wger.teams.services import assign_program
+
+
+TODAY = datetime.date(2026, 11, 11)
+
+
+class TrainingPagesTestCase(WgerTestCase):
+    """
+    Tests for the Training page: programs, plans and routines of the user.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.user = User.objects.create_user(username='athlete', email='athlete@example.com')
+        self.other = User.objects.create_user(username='other', email='other@example.com')
+
+        self.finished = self.make_routine(self.user, 'Old block', (2026, 9, 1), (2026, 9, 28))
+        self.current = self.make_routine(self.user, 'Base block', (2026, 11, 2), (2026, 11, 29))
+        self.upcoming = self.make_routine(self.user, 'Next block', (2026, 12, 1), (2027, 1, 11))
+        self.plan = self.make_routine(
+            self.user, 'Full body plan', (2026, 1, 1), (2026, 1, 28), is_template=True
+        )
+        self.foreign = self.make_routine(self.other, 'Foreign block', (2026, 11, 2), (2026, 11, 29))
+        self.foreign_plan = self.make_routine(
+            self.other, 'Foreign plan', (2026, 1, 1), (2026, 1, 28), is_template=True
+        )
+
+        self.upper = self.add_day(self.current, 1, 'Upper body', exercises=2)
+        self.add_day(self.current, 2, 'Rest', is_rest=True)
+        self.plan_day = self.add_day(self.plan, 1, 'Plan day A', exercises=1)
+        self.add_day(self.plan, 2, 'Plan day B')
+        self.add_day(self.foreign, 1, 'Foreign day')
+
+        patcher = mock.patch('wger.teams.views.training.user_today', return_value=TODAY)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.client.force_login(self.user)
+
+    @staticmethod
+    def make_routine(user, name, start, end, is_template=False) -> Routine:
+        return Routine.objects.create(
+            user=user,
+            name=name,
+            start=datetime.date(*start),
+            end=datetime.date(*end),
+            is_template=is_template,
+        )
+
+    @staticmethod
+    def add_day(routine, order, name, is_rest=False, exercises=0) -> Day:
+        day = Day.objects.create(routine=routine, order=order, name=name, is_rest=is_rest)
+        for number in range(exercises):
+            slot = Slot.objects.create(day=day, order=number + 1)
+            SlotEntry.objects.create(
+                slot=slot,
+                exercise_id=1,
+                repetition_unit=RepetitionUnit.objects.first(),
+                weight_unit=WeightUnit.objects.first(),
+                order=1,
+            )
+        return day
+
+    def test_login_required(self):
+        """
+        Anonymous users are sent to the login on all three tabs.
+        """
+        self.client.logout()
+        for name in ('training:programs', 'training:plans', 'training:routines'):
+            response = self.client.get(reverse(name))
+            self.assertEqual(response.status_code, 302, name)
+            self.assertIn('login', response.url)
+
+    def test_programs(self):
+        """
+        Programs are the own dated routines: the running one first, then upcoming, then
+        finished, with weeks and number of routines. No plans, nothing of other users.
+        """
+        later = self.make_routine(self.user, 'Later block', (2027, 2, 1), (2027, 2, 14))
+        older = self.make_routine(self.user, 'Older block', (2026, 5, 4), (2026, 5, 31))
+
+        response = self.client.get(reverse('training:programs'))
+
+        self.assertEqual(response.status_code, 200)
+        entries = response.context['entries']
+        # The next upcoming program before later ones, the latest finished one first
+        self.assertEqual(
+            [(e['program'], e['status'], e['weeks']) for e in entries],
+            [
+                (self.current, 'current', 4),
+                (self.upcoming, 'upcoming', 6),
+                (later, 'upcoming', 2),
+                (self.finished, 'finished', 4),
+                (older, 'finished', 4),
+            ],
+        )
+        # The rest day is not a routine
+        self.assertEqual(entries[0]['program'].training_days, 1)
+        self.assertIsNone(entries[0]['assignment'])
+        self.assertContains(response, self.current.get_absolute_url())
+        self.assertNotContains(response, 'Full body plan')
+        self.assertNotContains(response, 'Foreign')
+
+    def test_program_boundary_days(self):
+        """
+        A program is running on its first and last day, upcoming the day before and finished
+        the day after.
+        """
+        cases = (
+            ((2026, 11, 11), (2026, 11, 20), 'current'),
+            ((2026, 11, 1), (2026, 11, 11), 'current'),
+            ((2026, 11, 12), (2026, 11, 20), 'upcoming'),
+            ((2026, 11, 1), (2026, 11, 10), 'finished'),
+        )
+        for start, end, expected in cases:
+            routine = self.make_routine(self.user, 'Boundary', start, end)
+            response = self.client.get(reverse('training:programs'))
+            status = {e['program']: e['status'] for e in response.context['entries']}[routine]
+            self.assertEqual(status, expected, (start, end))
+            routine.delete()
+
+    def test_assigned_program_shows_team_and_coach(self):
+        """
+        A program that came from a coach names the team and the coach.
+        """
+        coach = User.objects.create_user(username='coach', email='coach@example.com')
+        team = Team.objects.create(name='Lions', created_by=coach)
+        for user, role in ((coach, 'coach'), (self.user, 'athlete')):
+            TeamMembership.objects.create(team=team, user=user, role=role, status='active')
+        template = self.make_routine(coach, 'Coach plan', (2026, 1, 1), (2026, 1, 28), True)
+        assignment = assign_program(
+            template=template,
+            assigned_by=coach,
+            start_date=datetime.date(2026, 11, 9),
+            end_date=datetime.date(2026, 12, 6),
+            team=team,
+        )
+
+        response = self.client.get(reverse('training:programs'))
+
+        entry = next(e for e in response.context['entries'] if e['program'].name == 'Coach plan')
+        self.assertEqual(entry['assignment'], assignment)
+        self.assertEqual(entry['program'].user, self.user)
+        self.assertContains(response, 'Assigned in Lions')
+
+    def test_plans(self):
+        """
+        Plans are the own templates with their number of routines, nothing else.
+        """
+        response = self.client.get(reverse('training:plans'))
+
+        self.assertEqual(response.status_code, 200)
+        plans = list(response.context['plans'])
+        self.assertEqual(plans, [self.plan])
+        self.assertEqual(plans[0].training_days, 2)
+        self.assertContains(response, reverse('manager:template:view', args=[self.plan.pk]))
+        self.assertNotContains(response, 'Base block')
+        self.assertNotContains(response, 'Foreign')
+
+    def test_routines(self):
+        """
+        Routines are the single training days of own plans and programs with their number of
+        exercises, without rest days and without days of other users.
+        """
+        response = self.client.get(reverse('training:routines'))
+
+        self.assertEqual(response.status_code, 200)
+        days = list(response.context['days'])
+        # Days of programs first, then the ones of plans
+        self.assertEqual([d.name for d in days], ['Upper body', 'Plan day A', 'Plan day B'])
+        self.assertEqual([d.exercises for d in days], [2, 1, 0])
+        self.assertNotContains(response, 'Foreign day')
+        self.assertNotContains(response, '>Rest<')

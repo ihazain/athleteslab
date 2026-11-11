@@ -1,10 +1,77 @@
-{% extends "base.html" %}
-{% load i18n %}
+{% extends "base_wide.html" %}
+{% load i18n static %}
 
 {% block title %}{% translate "Teams" %}{% endblock %}
 
 
+{% block header %}
+    <link rel="stylesheet" type="text/css" href="{% static 'teams/brand/pages.css' %}">
+{% endblock %}
+
+
 {% block content %}
+    {% if dashboard.teams %}
+        <dl class="alp-stats">
+            <div class="alp-stat">
+                <dt>{% translate "Teams" %}</dt>
+                <dd>{{ dashboard.teams|length }}</dd>
+            </div>
+            <div class="alp-stat">
+                <dt>{% translate "Athletes" %}</dt>
+                <dd>{{ dashboard.athletes }}</dd>
+            </div>
+            <div class="alp-stat">
+                <dt>{% translate "Running programs" %}</dt>
+                <dd>{{ dashboard.running }}</dd>
+            </div>
+            <div class="alp-stat">
+                <dt>{% translate "Open invitations" %}</dt>
+                <dd>{{ dashboard.invited }}</dd>
+            </div>
+        </dl>
+
+        <h4>{% translate "Teams you coach" %}</h4>
+        <ul class="list-unstyled alp-team-cards mb-5">
+            {% for entry in dashboard.teams %}
+                <li class="alp-card">
+                    <a class="fw-bold fs-5" href="{% url 'teams:team-detail' entry.team.pk %}">{{ entry.team.name }}</a>
+                    <div class="text-muted small mb-2">
+                        {% blocktranslate count count=entry.athletes trimmed %}
+                            {{ count }} athlete
+                        {% plural %}
+                            {{ count }} athletes
+                        {% endblocktranslate %}
+                        {% if entry.invited %}
+                            &middot;
+                            {% blocktranslate count count=entry.invited trimmed %}
+                                {{ count }} open invitation
+                            {% plural %}
+                                {{ count }} open invitations
+                            {% endblocktranslate %}
+                        {% endif %}
+                    </div>
+                    <div class="small">
+                        {% blocktranslate count count=entry.running trimmed %}
+                            {{ count }} running program
+                        {% plural %}
+                            {{ count }} running programs
+                        {% endblocktranslate %}
+                    </div>
+                    <div class="small mb-3">
+                        {% blocktranslate with trained=entry.trained total=entry.athletes trimmed %}
+                            {{ trained }} of {{ total }} trained in the last 7 days
+                        {% endblocktranslate %}
+                    </div>
+                    <a class="btn btn-primary btn-sm" href="{% url 'teams:assign' entry.team.pk %}">
+                        {% translate "Assign a program" %}
+                    </a>
+                    <a class="btn btn-light btn-sm" href="{% url 'teams:team-detail' entry.team.pk %}">
+                        {% translate "Open team" %}
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
 
     {% if invitations %}
         <h4>{% translate "Invitations" %}</h4>
@@ -69,7 +136,7 @@
                     {% endif %}
                 </div>
                 {% if not program.routine %}
-                    <span class="badge text-bg-secondary">{% translate "You deleted this routine" %}</span>
+                    <span class="badge text-bg-secondary">{% translate "You deleted this program" %}</span>
                 {% endif %}
                 {% if program.assignment.archived_at %}
                     <span class="badge text-bg-warning">{% translate "Withdrawn by the coach" %}</span>

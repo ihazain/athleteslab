@@ -35,7 +35,10 @@ from wger.teams.models import (
     TeamGroup,
     TeamMembership,
 )
-from wger.teams.services import assign_program
+from wger.teams.services import (
+    archive_assignment,
+    assign_program,
+)
 
 
 ACTIVE = TeamMembership.Status.ACTIVE
@@ -524,3 +527,90 @@ class CoachAssignmentPageTestCase(CoachProgramBaseTestCase):
                 response, reverse('teams:assignment-detail', kwargs={'pk': assignment.pk})
             )
         self.assertContains(response, reverse('teams:assign', kwargs={'pk': self.team.pk}))
+
+
+class CoachDashboardTestCase(CoachProgramBaseTestCase):
+    """
+    Tests for the coach numbers on the teams page.
+    """
+
+    def test_dashboard_counts_own_teams_only(self):
+        """
+        The dashboard counts active athletes, open invitations, assignments running today
+        and athletes who logged training for them in the last seven days, per coached team.
+        """
+        today = datetime.date.today()
+        running = assign_program(
+            template=self.template,
+            assigned_by=self.coach,
+            start_date=today - datetime.timedelta(days=3),
+            end_date=today + datetime.timedelta(days=3),
+            team=self.team,
+        )
+        # Not running: over, not started yet, withdrawn
+        for offset, archive in ((-40, False), (40, False), (-3, True)):
+            assignment = assign_program(
+                template=self.make_template(self.coach, f'Other {offset} {archive}'),
+                assigned_by=self.coach,
+                start_date=today + datetime.timedelta(days=offset),
+                end_date=today + datetime.timedelta(days=offset + 6),
+                team=self.team,
+            )
+            if archive:
+                archive_assignment(assignment)
+
+        copy = AssignedRoutine.objects.get(assignment=running, athlete=self.athlete1).routine
+        WorkoutLog.objects.create(
+            user=self.athlete1,
+            routine=copy,
+            exercise_id=1,
+            weight=10,
+            repetitions=10,
+            date=timezone.now() - datetime.timedelta(days=1),
+        )
+        # Too old, and a log on a routine that is not from this team
+        old_copy = AssignedRoutine.objects.get(assignment=running, athlete=self.athlete2).routine
+        WorkoutLog.objects.create(
+            user=self.athlete2,
+            routine=old_copy,
+            exercise_id=1,
+            weight=10,
+            repetitions=10,
+            date=timezone.now() - datetime.timedelta(days=8),
+        )
+        own = Routine.objects.create(
+            user=self.athlete2, name='Own', start=today, end=today + datetime.timedelta(days=7)
+        )
+        WorkoutLog.objects.create(
+            user=self.athlete2,
+            routine=own,
+            exercise_id=1,
+            weight=10,
+            repetitions=10,
+            date=timezone.now(),
+        )
+
+        response = self.client.get(reverse('teams:overview'))
+
+        dashboard = response.context['dashboard']
+        self.assertEqual([entry['team'] for entry in dashboard['teams']], [self.team])
+        entry = dashboard['teams'][0]
+        self.assertEqual(
+            (entry['athletes'], entry['invited'], entry['running'], entry['trained']),
+            (2, 1, 1, 1),
+        )
+        self.assertEqual(
+            (dashboard['athletes'], dashboard['invited'], dashboard['running']), (2, 1, 1)
+        )
+        self.assertContains(response, '1 of 2 trained in the last 7 days')
+        self.assertNotContains(response, 'Sharks')
+
+    def test_athletes_get_no_dashboard(self):
+        """
+        Athletes and invited users see no coach numbers.
+        """
+        for user in (self.athlete1, self.invited):
+            self.client.force_login(user)
+            response = self.client.get(reverse('teams:overview'))
+            self.assertEqual(response.context['dashboard']['teams'], [], user)
+            self.assertNotContains(response, 'Teams you coach')

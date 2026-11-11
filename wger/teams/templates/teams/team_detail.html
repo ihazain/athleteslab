@@ -18,7 +18,7 @@
             <li class="list-group-item">
                 <div class="d-flex flex-wrap justify-content-between gap-2">
                     <a href="{% url 'teams:assignment-detail' assignment.pk %}" class="fw-bold">
-                        {{ assignment.template.name|default:_("Deleted template") }}
+                        {{ assignment.template.name|default:_("Deleted plan") }}
                     </a>
                     <span class="text-muted">
                         {{ assignment.start_date|date:"SHORT_DATE_FORMAT" }}
@@ -192,7 +192,7 @@
         <button type="submit" class="btn btn-light btn-sm">{% translate "Rename" %}</button>
     </form>
 
-    {% translate "Delete this team? The athletes keep their routines and logs." as confirm_delete %}
+    {% translate "Delete this team? The athletes keep their programs and logs." as confirm_delete %}
     <form method="post" action="{% url 'teams:team-delete' team.pk %}"
           onsubmit="return confirm('{{ confirm_delete|escapejs }}');">
         {% csrf_token %}

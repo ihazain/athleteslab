@@ -1,0 +1,15 @@
+{% load i18n %}
+<ul class="nav nav-pills alp-tabs mb-4" aria-label="{% translate "Calendar views" %}">
+    <li class="nav-item">
+        <a class="nav-link {% if view == 'week' %}active{% endif %}" href="{% url 'calendar:week' %}"
+           {% if view == 'week' %}aria-current="page"{% endif %}>{% translate "Week" %}</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if view == 'timeline' %}active{% endif %}" href="{% url 'calendar:timeline' %}"
+           {% if view == 'timeline' %}aria-current="page"{% endif %}>{% translate "Timeline" %}</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if view == 'year' %}active{% endif %}" href="{% url 'calendar:year' %}"
+           {% if view == 'year' %}aria-current="page"{% endif %}>{% translate "Year" %}</a>
+    </li>
+</ul>

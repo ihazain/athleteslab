@@ -1,0 +1,72 @@
+{% extends "base_wide.html" %}
+{% load i18n static %}
+
+{% block title %}{% translate "Training" %}{% endblock %}
+
+{% block header %}
+    <link rel="stylesheet" type="text/css" href="{% static 'teams/brand/pages.css' %}">
+{% endblock %}
+
+
+{% block content %}
+    {% include 'training/_tabs.html' %}
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <p class="text-muted mb-0">
+            {% translate "A program is a plan that runs over several weeks. You train it, and a coach can assign one to you." %}
+        </p>
+        <a class="btn btn-primary btn-sm" href="{% url 'manager:routine:add' %}">{% translate "New program" %}</a>
+    </div>
+
+    <ul class="list-unstyled alp-cards">
+        {% for entry in entries %}
+            <li class="alp-card">
+                <div class="d-flex flex-wrap justify-content-between gap-2">
+                    <a class="fw-bold" href="{{ entry.program.get_absolute_url }}">{{ entry.program.name }}</a>
+                    {% if entry.status == 'current' %}
+                        <span class="badge text-bg-dark">{% translate "Running" %}</span>
+                    {% elif entry.status == 'upcoming' %}
+                        <span class="badge text-bg-light border">{% translate "Upcoming" %}</span>
+                    {% else %}
+                        <span class="badge text-bg-light border text-muted">{% translate "Finished" %}</span>
+                    {% endif %}
+                </div>
+                <div class="text-muted small">
+                    {{ entry.program.start|date:"SHORT_DATE_FORMAT" }} &ndash;
+                    {{ entry.program.end|date:"SHORT_DATE_FORMAT" }}
+                    &middot;
+                    {% blocktranslate count count=entry.weeks trimmed %}
+                        {{ count }} week
+                    {% plural %}
+                        {{ count }} weeks
+                    {% endblocktranslate %}
+                    &middot;
+                    {% blocktranslate count count=entry.program.training_days trimmed %}
+                        {{ count }} routine
+                    {% plural %}
+                        {{ count }} routines
+                    {% endblocktranslate %}
+                </div>
+                {% if entry.assignment %}
+                    <div class="small mt-1">
+                        {% if entry.assignment.team %}
+                            {% blocktranslate with team=entry.assignment.team.name trimmed %}
+                                Assigned in {{ team }}
+                            {% endblocktranslate %}
+                        {% else %}
+                            {% translate "Assigned to you personally" %}
+                        {% endif %}
+                        {% if entry.assignment.assigned_by %}
+                            &middot; {{ entry.assignment.assigned_by.username }}
+                        {% endif %}
+                        {% if entry.assignment.archived_at %}
+                            <span class="badge text-bg-warning">{% translate "Withdrawn by the coach" %}</span>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </li>
+        {% empty %}
+            <li class="alp-card text-muted">{% translate "You have no programs yet." %}</li>
+        {% endfor %}
+    </ul>
+{% endblock %}

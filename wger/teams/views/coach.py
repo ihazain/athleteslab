@@ -178,7 +178,7 @@ def team_delete(request, pk: int):
     team.delete()
     messages.success(
         request,
-        _('The team was deleted. The athletes keep their routines and logs.'),
+        _('The team was deleted. The athletes keep their programs and logs.'),
     )
     return redirect('teams:overview')
 
@@ -354,6 +354,6 @@ def assignment_archive(request, pk: int):
     _run(
         request,
         lambda: archive_assignment(assignment),
-        _('The assignment was withdrawn. The athletes keep their routines and logs.'),
+        _('The assignment was withdrawn. The athletes keep their programs and logs.'),
     )
     return redirect('teams:assignment-detail', pk=assignment.pk)

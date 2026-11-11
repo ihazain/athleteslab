@@ -13,6 +13,18 @@ a narrow rail with one icon per section and one for the account, whose menus
 open beside it (the browser remembers the state). On phones and tablets it is a black
 top bar, and the opened menu now sits below the logo instead of beside it.
 
+### Training, calendar and teams as modules
+* The words changed: a **routine** is the training of one day, a **plan** is a
+  reusable set of routines (what wger calls a template), a **program** is a
+  plan that runs over weeks (a dated wger routine, own or assigned by a coach).
+* New Training page with the tabs Programs, Plans and Routines.
+* New Calendar page with a week view (planned routine and sessions done per
+  day), a timeline of the programs over twelve weeks and a year view.
+* Teams is its own entry in the menu. For coaches the page starts with a
+  dashboard: teams, athletes, running programs, open invitations, and per team
+  how many athletes trained in the last seven days.
+* The routine editor and the routine pages themselves still use wger's wording.
+
 ### Teams (beta)
 A new `wger.teams` app lets coaches create teams, invite athletes and coaches
 as members, and assign routine templates to a whole team, a group of a team

@@ -1,0 +1,15 @@
+{% load i18n %}
+<ul class="nav nav-pills alp-tabs mb-3" aria-label="{% translate "Training" %}">
+    <li class="nav-item">
+        <a class="nav-link {% if tab == 'programs' %}active{% endif %}" href="{% url 'training:programs' %}"
+           {% if tab == 'programs' %}aria-current="page"{% endif %}>{% translate "Programs" %}</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if tab == 'plans' %}active{% endif %}" href="{% url 'training:plans' %}"
+           {% if tab == 'plans' %}aria-current="page"{% endif %}>{% translate "Plans" %}</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if tab == 'routines' %}active{% endif %}" href="{% url 'training:routines' %}"
+           {% if tab == 'routines' %}aria-current="page"{% endif %}>{% translate "Routines" %}</a>
+    </li>
+</ul>

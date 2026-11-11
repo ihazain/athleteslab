@@ -16,6 +16,7 @@
 
 # Standard Library
 import copy
+import datetime
 import logging
 
 # Django
@@ -499,3 +500,48 @@ def delete_group(group: TeamGroup, user) -> None:
     """
     _require_coach(user, group.team)
     group.delete()
+
+
+def coach_dashboard(user, today: datetime.date) -> dict:
+    """
+    Numbers for the teams the user coaches: athletes, open invitations, running
+    assignments and how many athletes logged training for them in the last seven days.
+    """
+    since = timezone.now() - datetime.timedelta(days=7)
+    teams = []
+    athletes = set()
+    for team in Team.objects.filter(
+        memberships__user=user,
+        memberships__role=TeamMembership.Role.COACH,
+        memberships__status=TeamMembership.Status.ACTIVE,
+    ).order_by('name', 'pk'):
+        members = set(active_athletes(team.memberships).values_list('user', flat=True))
+        athletes |= members
+        teams.append(
+            {
+                'team': team,
+                'athletes': len(members),
+                'invited': team.memberships.filter(status=TeamMembership.Status.INVITED).count(),
+                'running': ProgramAssignment.objects.filter(
+                    team=team,
+                    archived_at__isnull=True,
+                    start_date__lte=today,
+                    end_date__gte=today,
+                ).count(),
+                'trained': WorkoutLog.objects.filter(
+                    routine__assignedroutine__assignment__team=team,
+                    user__in=members,
+                    date__gte=since,
+                )
+                .values('user')
+                .distinct()
+                .count(),
+            }
+        )
+
+    return {
+        'teams': teams,
+        'athletes': len(athletes),
+        'invited': sum(entry['invited'] for entry in teams),
+        'running': sum(entry['running'] for entry in teams),
+    }

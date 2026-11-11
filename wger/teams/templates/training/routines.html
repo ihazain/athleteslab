@@ -1,0 +1,44 @@
+{% extends "base_wide.html" %}
+{% load i18n static %}
+
+{% block title %}{% translate "Training" %}{% endblock %}
+
+{% block header %}
+    <link rel="stylesheet" type="text/css" href="{% static 'teams/brand/pages.css' %}">
+{% endblock %}
+
+
+{% block content %}
+    {% include 'training/_tabs.html' %}
+
+    <p class="text-muted">
+        {% translate "A routine is the training of a single day. Routines are part of a plan or a program and are edited there." %}
+    </p>
+
+    <ul class="list-unstyled alp-cards">
+        {% for day in days %}
+            <li class="alp-card">
+                <div class="d-flex flex-wrap justify-content-between gap-2">
+                    {% if day.routine.is_template %}
+                        <a class="fw-bold" href="{% url 'manager:template:view' day.routine.pk %}">{{ day.name|default:_("Unnamed routine") }}</a>
+                        <span class="badge text-bg-light border">{% translate "Plan" %}</span>
+                    {% else %}
+                        <a class="fw-bold" href="{{ day.routine.get_absolute_url }}">{{ day.name|default:_("Unnamed routine") }}</a>
+                        <span class="badge text-bg-dark">{% translate "Program" %}</span>
+                    {% endif %}
+                </div>
+                <div class="text-muted small">
+                    {{ day.routine.name }}
+                    &middot;
+                    {% blocktranslate count count=day.exercises trimmed %}
+                        {{ count }} exercise
+                    {% plural %}
+                        {{ count }} exercises
+                    {% endblocktranslate %}
+                </div>
+            </li>
+        {% empty %}
+            <li class="alp-card text-muted">{% translate "You have no routines yet." %}</li>
+        {% endfor %}
+    </ul>
+{% endblock %}

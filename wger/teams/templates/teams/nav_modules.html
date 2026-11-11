@@ -1,0 +1,35 @@
+{% load i18n wger_extras %}
+{% if user.is_authenticated %}
+    <li class="nav-item dropdown">
+        <a href="{% url 'teams:overview' %}" rel="nofollow" class="nav-link dropdown-toggle text-white"
+           data-bs-toggle="dropdown"><span class="{% fa_class 'users' %} alp-nav-icon" aria-hidden="true"></span>{% translate "Teams" %} <b class="caret"></b></a>
+        <ul class="dropdown-menu">
+            <li>
+                <a class="dropdown-item" href="{% url 'teams:overview' %}" rel="nofollow">
+                    {% translate "Dashboard" %}
+                </a>
+            </li>
+        </ul>
+    </li>
+    <li class="nav-item dropdown">
+        <a href="{% url 'calendar:week' %}" rel="nofollow" class="nav-link dropdown-toggle text-white"
+           data-bs-toggle="dropdown"><span class="{% fa_class 'calendar-days' %} alp-nav-icon" aria-hidden="true"></span>{% translate "Calendar" %} <b class="caret"></b></a>
+        <ul class="dropdown-menu">
+            <li>
+                <a class="dropdown-item" href="{% url 'calendar:week' %}" rel="nofollow">
+                    {% translate "Week" %}
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item" href="{% url 'calendar:timeline' %}" rel="nofollow">
+                    {% translate "Timeline" %}
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item" href="{% url 'calendar:year' %}" rel="nofollow">
+                    {% translate "Year" %}
+                </a>
+            </li>
+        </ul>
+    </li>
+{% endif %}

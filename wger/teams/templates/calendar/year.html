@@ -1,0 +1,66 @@
+{% extends "base_wide.html" %}
+{% load i18n static %}
+
+{% block title %}{% translate "Calendar" %}{% endblock %}
+
+{% block header %}
+    <link rel="stylesheet" type="text/css" href="{% static 'teams/brand/pages.css' %}">
+{% endblock %}
+
+
+{% block content %}
+    {% include 'calendar/_tabs.html' %}
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h4 class="mb-0">{{ year|stringformat:"d" }}</h4>
+        <div class="btn-group">
+            <a class="btn btn-light btn-sm" href="?year={{ previous|stringformat:"d" }}">&laquo; {{ previous|stringformat:"d" }}</a>
+            <a class="btn btn-light btn-sm" href="{% url 'calendar:year' %}">{% translate "This year" %}</a>
+            <a class="btn btn-light btn-sm" href="?year={{ next|stringformat:"d" }}">{{ next|stringformat:"d" }} &raquo;</a>
+        </div>
+    </div>
+
+    <p class="text-muted">
+        {% blocktranslate with trained=trained planned=planned trimmed %}
+            Trained on {{ trained }} days, training planned on {{ planned }} days.
+        {% endblocktranslate %}
+    </p>
+
+    <div class="alp-year">
+        {% for month in months %}
+            <section class="alp-month">
+                <h5 class="d-flex justify-content-between align-items-baseline">
+                    <span>{{ month.first|date:"F" }}</span>
+                    <span class="small text-muted">{{ month.trained }} / {{ month.planned }}</span>
+                </h5>
+                <table class="alp-month-table">
+                    <thead>
+                        <tr>
+                            {% for weekday in weekdays %}
+                                <th scope="col"><abbr title="{{ weekday|date:'l' }}">{{ weekday|date:"D"|slice:":2" }}</abbr></th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for week in month.weeks %}
+                            <tr>
+                                {% for day in week %}
+                                    {% if day %}
+                                        <td class="alp-state-{{ day.state }} {% if day.is_today %}alp-today{% endif %}"
+                                            title="{{ day.date|date:'SHORT_DATE_FORMAT' }}{% for training in day.planned %}, {{ training.name }}{% endfor %}">
+                                            <a href="{% url 'calendar:week' %}?date={{ day.date|date:'Y-m-d' }}">{{ day.date.day }}</a>
+                                        </td>
+                                    {% else %}
+                                        <td></td>
+                                    {% endif %}
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </section>
+        {% endfor %}
+    </div>
+
+    {% include 'calendar/_legend.html' %}
+{% endblock %}

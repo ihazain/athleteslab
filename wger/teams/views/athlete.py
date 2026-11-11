@@ -30,12 +30,14 @@ from django.views.decorators.http import (
 )
 
 # wger
+from wger.teams.calendar import user_today
 from wger.teams.models import (
     AssignedRoutine,
     TeamMembership,
 )
 from wger.teams.services import (
     accept_invitation,
+    coach_dashboard,
     decline_invitation,
 )
 
@@ -62,6 +64,7 @@ def overview(request):
         'invitations': memberships.filter(status=TeamMembership.Status.INVITED),
         'memberships': memberships.filter(status=TeamMembership.Status.ACTIVE),
         'programs': programs,
+        'dashboard': coach_dashboard(request.user, user_today(request.user)),
     }
     return render(request, 'teams/overview.html', context)
 

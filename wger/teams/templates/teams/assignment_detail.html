@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block title %}{{ assignment.template.name|default:_("Deleted template") }}{% endblock %}
+{% block title %}{{ assignment.template.name|default:_("Deleted plan") }}{% endblock %}
 
 
 {% block content %}
@@ -48,7 +48,7 @@
     {% if assignment.archived_at %}
         <div class="alert alert-warning">
             {% blocktranslate with date=assignment.archived_at|date:"SHORT_DATE_FORMAT" trimmed %}
-                This assignment was withdrawn on {{ date }}. The athletes keep their routines and logs.
+                This assignment was withdrawn on {{ date }}. The athletes keep their programs and logs.
             {% endblocktranslate %}
         </div>
     {% endif %}
@@ -59,7 +59,7 @@
             <thead>
                 <tr>
                     <th scope="col">{% translate "Athlete" %}</th>
-                    <th scope="col">{% translate "Routine" %}</th>
+                    <th scope="col">{% translate "Program" %}</th>
                     <th scope="col" class="text-end">{% translate "Training sessions" %}</th>
                     <th scope="col" class="text-end">{% translate "Last activity" %}</th>
                 </tr>
@@ -90,7 +90,7 @@
     </div>
 
     {% if not assignment.archived_at %}
-        {% translate "Withdraw this assignment? The athletes keep their routines and logs." as confirm_archive %}
+        {% translate "Withdraw this assignment? The athletes keep their programs and logs." as confirm_archive %}
         <form method="post" action="{% url 'teams:assignment-archive' assignment.pk %}" class="mt-4"
               onsubmit="return confirm('{{ confirm_archive|escapejs }}');">
             {% csrf_token %}

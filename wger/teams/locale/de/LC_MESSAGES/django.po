@@ -4,8 +4,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: athleteslab teams\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-11 11:40+0100\n"
-"PO-Revision-Date: 2026-11-11 11:40+0100\n"
+"POT-Creation-Date: 2026-11-11 15:59+0100\n"
+"PO-Revision-Date: 2026-11-11 15:59+0100\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
 "Language: de\n"
@@ -31,11 +31,12 @@ msgid "Members"
 msgstr "Mitglieder"
 
 #, python-format
-msgid "%(name)s (public template)"
-msgstr "%(name)s (öffentliche Vorlage)"
+#| msgid "%(name)s (public template)"
+msgid "%(name)s (public plan)"
+msgstr "%(name)s (öffentlicher Plan)"
 
-msgid "Program"
-msgstr "Programm"
+msgid "Plan"
+msgstr "Plan"
 
 #, python-format
 msgid "Whole team (%(athletes)s)"
@@ -93,32 +94,106 @@ msgstr "Alle Mitglieder müssen zum Team der Gruppe gehören."
 msgid "The team already has a group with this name."
 msgstr "Das Team hat bereits eine Gruppe mit diesem Namen."
 
+msgid "Trained"
+msgstr "Trainiert"
+
+msgid "Planned"
+msgstr "Geplant"
+
+msgid "Planned, not trained"
+msgstr "Geplant, nicht trainiert"
+
+msgid "Calendar views"
+msgstr "Kalenderansichten"
+
+msgid "Week"
+msgstr "Woche"
+
+msgid "Timeline"
+msgstr "Zeitleiste"
+
+msgid "Year"
+msgstr "Jahr"
+
+msgid "Calendar"
+msgstr "Kalender"
+
+msgid "Earlier"
+msgstr "Früher"
+
+msgid "Today"
+msgstr "Heute"
+
+msgid "Later"
+msgstr "Später"
+
+#, python-format
+msgid "%(count)s week"
+msgid_plural "%(count)s weeks"
+msgstr[0] "%(count)s Woche"
+msgstr[1] "%(count)s Wochen"
+
+msgid "No programs in these weeks."
+msgstr "Keine Programme in diesen Wochen."
+
+msgid "Previous week"
+msgstr "Vorherige Woche"
+
+msgid "Next week"
+msgstr "Nächste Woche"
+
+msgid "No training planned"
+msgstr "Kein Training geplant"
+
+#, python-format
+msgid "%(count)s session done"
+msgid_plural "%(count)s sessions done"
+msgstr[0] "%(count)s Einheit absolviert"
+msgstr[1] "%(count)s Einheiten absolviert"
+
+msgid "Not trained"
+msgstr "Nicht trainiert"
+
+msgid "This year"
+msgstr "Dieses Jahr"
+
+#, python-format
+msgid "Trained on %(trained)s days, training planned on %(planned)s days."
+msgstr ""
+"An %(trained)s Tagen trainiert, an %(planned)s Tagen war Training geplant."
+
 msgid "Assign a program"
 msgstr "Programm zuweisen"
 
+#| msgid ""
+#| "Every athlete gets an own copy of the program for this period. Later changes"
+#| " to the template do not change the copies. Invited members who have not "
+#| "accepted yet receive nothing."
 msgid ""
 "Every athlete gets an own copy of the program for this period. Later changes"
-" to the template do not change the copies. Invited members who have not "
-"accepted yet receive nothing."
+" to the plan do not change the copies. Invited members who have not accepted"
+" yet receive nothing."
 msgstr ""
 "Jeder Athlet erhält für diesen Zeitraum eine eigene Kopie des Programms. "
-"Spätere Änderungen an der Vorlage ändern die Kopien nicht. Eingeladene "
-"Mitglieder, die noch nicht angenommen haben, erhalten nichts."
+"Spätere Änderungen am Plan ändern die Kopien nicht. Eingeladene Mitglieder, "
+"die noch nicht angenommen haben, erhalten nichts."
 
 msgid "Assign"
 msgstr "Zuweisen"
 
 msgid ""
-"You have no templates yet. Create a routine and mark it as template first."
+"You have no plans yet. Create a program and save it as a template to reuse "
+"it as a plan."
 msgstr ""
-"Du hast noch keine Vorlagen. Erstelle zuerst einen Trainingsplan und "
-"markiere ihn als Vorlage."
+"Du hast noch keine Pläne. Erstelle ein Programm und speichere es als "
+"Vorlage, um es als Plan wiederzuverwenden."
 
-msgid "Your templates"
-msgstr "Deine Vorlagen"
+msgid "Plans"
+msgstr "Pläne"
 
-msgid "Deleted template"
-msgstr "Gelöschte Vorlage"
+#| msgid "Deleted template"
+msgid "Deleted plan"
+msgstr "Gelöschter Plan"
 
 msgid "Teams"
 msgstr "Teams"
@@ -132,9 +207,6 @@ msgstr "Zeitraum"
 msgid "Assigned by"
 msgstr "Zugewiesen von"
 
-msgid "Trained"
-msgstr "Trainiert"
-
 #, python-format
 msgid "%(trained)s of %(total)s athlete"
 msgid_plural "%(trained)s of %(total)s athletes"
@@ -142,12 +214,15 @@ msgstr[0] "%(trained)s von %(total)s Athlet"
 msgstr[1] "%(trained)s von %(total)s Athleten"
 
 #, python-format
+#| msgid ""
+#| "This assignment was withdrawn on %(date)s. The athletes keep their routines "
+#| "and logs."
 msgid ""
-"This assignment was withdrawn on %(date)s. The athletes keep their routines "
+"This assignment was withdrawn on %(date)s. The athletes keep their programs "
 "and logs."
 msgstr ""
 "Diese Zuweisung wurde am %(date)s zurückgezogen. Die Athleten behalten ihre "
-"Trainingspläne und Protokolle."
+"Programme und Protokolle."
 
 msgid "Athletes"
 msgstr "Athleten"
@@ -155,8 +230,8 @@ msgstr "Athleten"
 msgid "Athlete"
 msgstr "Athlet"
 
-msgid "Routine"
-msgstr "Trainingsplan"
+msgid "Program"
+msgstr "Programm"
 
 msgid "Training sessions"
 msgstr "Trainingseinheiten"
@@ -173,13 +248,58 @@ msgstr "Vom Athleten gelöscht"
 msgid "Not started"
 msgstr "Nicht begonnen"
 
-msgid "Withdraw this assignment? The athletes keep their routines and logs."
+#| msgid ""
+#| "Withdraw this assignment? The athletes keep their routines and logs."
+msgid "Withdraw this assignment? The athletes keep their programs and logs."
 msgstr ""
-"Diese Zuweisung zurückziehen? Die Athleten behalten ihre Trainingspläne und "
+"Diese Zuweisung zurückziehen? Die Athleten behalten ihre Programme und "
 "Protokolle."
 
 msgid "Withdraw assignment"
 msgstr "Zuweisung zurückziehen"
+
+msgid "Dashboard"
+msgstr "Übersicht"
+
+msgid "Programs"
+msgstr "Programme"
+
+msgid "Routines"
+msgstr "Routinen"
+
+msgid "Running programs"
+msgstr "Laufende Programme"
+
+msgid "Open invitations"
+msgstr "Offene Einladungen"
+
+msgid "Teams you coach"
+msgstr "Teams, die du trainierst"
+
+#, python-format
+msgid "%(count)s athlete"
+msgid_plural "%(count)s athletes"
+msgstr[0] "%(count)s Athlet"
+msgstr[1] "%(count)s Athleten"
+
+#, python-format
+msgid "%(count)s open invitation"
+msgid_plural "%(count)s open invitations"
+msgstr[0] "%(count)s offene Einladung"
+msgstr[1] "%(count)s offene Einladungen"
+
+#, python-format
+msgid "%(count)s running program"
+msgid_plural "%(count)s running programs"
+msgstr[0] "%(count)s laufendes Programm"
+msgstr[1] "%(count)s laufende Programme"
+
+#, python-format
+msgid "%(trained)s of %(total)s trained in the last 7 days"
+msgstr "%(trained)s von %(total)s haben in den letzten 7 Tagen trainiert"
+
+msgid "Open team"
+msgstr "Team öffnen"
 
 msgid "Invitations"
 msgstr "Einladungen"
@@ -200,8 +320,9 @@ msgstr "Deine Programme"
 msgid "Assigned to you personally"
 msgstr "Dir persönlich zugewiesen"
 
-msgid "You deleted this routine"
-msgstr "Du hast diesen Trainingsplan gelöscht"
+#| msgid "You deleted this routine"
+msgid "You deleted this program"
+msgstr "Du hast dieses Programm gelöscht"
 
 msgid "Withdrawn by the coach"
 msgstr "Vom Trainer zurückgezogen"
@@ -234,17 +355,8 @@ msgstr "Menü einklappen"
 msgid "Expand menu"
 msgstr "Menü ausklappen"
 
-msgid "Programs"
-msgstr "Programme"
-
 msgid "Whole team"
 msgstr "Ganzes Team"
-
-#, python-format
-msgid "%(count)s athlete"
-msgid_plural "%(count)s athletes"
-msgstr[0] "%(count)s Athlet"
-msgstr[1] "%(count)s Athleten"
 
 msgid "Withdrawn"
 msgstr "Zurückgezogen"
@@ -326,13 +438,80 @@ msgstr "Team-Einstellungen"
 msgid "Rename"
 msgstr "Umbenennen"
 
-msgid "Delete this team? The athletes keep their routines and logs."
+#| msgid "Delete this team? The athletes keep their routines and logs."
+msgid "Delete this team? The athletes keep their programs and logs."
 msgstr ""
-"Dieses Team löschen? Die Athleten behalten ihre Trainingspläne und "
-"Protokolle."
+"Dieses Team löschen? Die Athleten behalten ihre Programme und Protokolle."
 
 msgid "Delete team"
 msgstr "Team löschen"
+
+msgid "Training"
+msgstr "Training"
+
+msgid ""
+"A plan is a set of routines for several days that you can reuse. Coaches "
+"assign plans to their teams."
+msgstr ""
+"Ein Plan ist eine Sammlung von Routinen für mehrere Tage, die du "
+"wiederverwenden kannst. Trainer weisen Pläne ihren Teams zu."
+
+msgid "Public plans"
+msgstr "Öffentliche Pläne"
+
+msgid "Public"
+msgstr "Öffentlich"
+
+#, python-format
+msgid "%(count)s routine"
+msgid_plural "%(count)s routines"
+msgstr[0] "%(count)s Routine"
+msgstr[1] "%(count)s Routinen"
+
+msgid ""
+"A program is a plan that runs over several weeks. You train it, and a coach "
+"can assign one to you."
+msgstr ""
+"Ein Programm ist ein Plan, der über mehrere Wochen läuft. Du trainierst "
+"danach, und ein Trainer kann dir eines zuweisen."
+
+msgid "New program"
+msgstr "Neues Programm"
+
+msgid "Running"
+msgstr "Läuft"
+
+msgid "Upcoming"
+msgstr "Bevorstehend"
+
+msgid "Finished"
+msgstr "Beendet"
+
+#, python-format
+msgid "Assigned in %(team)s"
+msgstr "Zugewiesen in %(team)s"
+
+msgid "You have no programs yet."
+msgstr "Du hast noch keine Programme."
+
+msgid ""
+"A routine is the training of a single day. Routines are part of a plan or a "
+"program and are edited there."
+msgstr ""
+"Eine Routine ist das Training eines einzelnen Tages. Routinen gehören zu "
+"einem Plan oder Programm und werden dort bearbeitet."
+
+msgid "Unnamed routine"
+msgstr "Unbenannte Routine"
+
+#, python-format
+msgid "%(count)s exercise"
+msgid_plural "%(count)s exercises"
+msgstr[0] "%(count)s Übung"
+msgstr[1] "%(count)s Übungen"
+
+msgid "You have no routines yet."
+msgstr "Du hast noch keine Routinen."
 
 #, python-format
 msgid "You are now a member of %(team)s."
@@ -352,9 +531,11 @@ msgstr "Das Team wurde erstellt. Lade jetzt deine Athleten ein."
 msgid "The team was renamed."
 msgstr "Das Team wurde umbenannt."
 
-msgid "The team was deleted. The athletes keep their routines and logs."
+#| msgid ""
+#| "The team was deleted. The athletes keep their routines and logs."
+msgid "The team was deleted. The athletes keep their programs and logs."
 msgstr ""
-"Das Team wurde gelöscht. Die Athleten behalten ihre Trainingspläne und "
+"Das Team wurde gelöscht. Die Athleten behalten ihre Programme und "
 "Protokolle."
 
 msgid "No user with this username or e-mail address was found."
@@ -393,8 +574,10 @@ msgstr[0] ""
 msgstr[1] ""
 "Das Programm wurde zugewiesen, %(count)d Athleten haben eine Kopie erhalten."
 
+#| msgid ""
+#| "The assignment was withdrawn. The athletes keep their routines and logs."
 msgid ""
-"The assignment was withdrawn. The athletes keep their routines and logs."
+"The assignment was withdrawn. The athletes keep their programs and logs."
 msgstr ""
-"Die Zuweisung wurde zurückgezogen. Die Athleten behalten ihre Trainingspläne"
-" und Protokolle."
+"Die Zuweisung wurde zurückgezogen. Die Athleten behalten ihre Programme und "
+"Protokolle."

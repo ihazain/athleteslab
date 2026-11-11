@@ -23,28 +23,13 @@
                     {# Workout tab #}
                     {#             #}
                     <li class="nav-item dropdown">
-                        <a href="{% url 'manager:routine:overview' %}"
+                        <a href="{% url 'training:programs' %}"
                            rel="nofollow"
                            class="nav-link dropdown-toggle text-white {% if active_tab == 'workout' %}text-decoration-underline{% endif %}"
                            data-bs-toggle="dropdown"><span class="{% fa_class 'dumbbell' %} alp-nav-icon" aria-hidden="true"></span>{% translate "Training" %} <b class="caret"></b></a>
                         <ul class="dropdown-menu">
-                            <li>
-                                <a class="dropdown-item" href="{% url 'manager:routine:overview' %}"
-                                   rel="nofollow">
-                                    {% if not user.is_authenticated %}
-                                        <span class="{% fa_class 'lock' %}"></span>
-                                    {% endif %}
-                                    {% translate "Routines" %}
-                                </a>
-                            </li>
+                            {% include 'teams/nav_training.html' %}
                             {% if user.is_authenticated %}
-                                <li>
-                                    <a class="dropdown-item"
-                                       href="{% url 'manager:routine:calendar' %}"
-                                       rel="nofollow">
-                                        {% translate "Calendar" %}
-                                    </a>
-                                </li>
                                 <li>
                                     <a class="dropdown-item"
                                        href="{% url 'measurements:overview' %}" rel="nofollow">
@@ -73,36 +58,6 @@
                                         <span class="{% fa_class 'lock' %}"></span>
                                     {% endif %}
                                     {% translate "Trophies" %}
-                                </a>
-                            </li>
-
-                            {% if user.is_authenticated %}
-                                <li>
-                                    <a class="dropdown-item" href="{% url 'teams:overview' %}"
-                                       rel="nofollow">
-                                        {% translate "Teams" %}
-                                    </a>
-                                </li>
-                            {% endif %}
-
-                            <li class="dropdown-divider"></li>
-                            <li class="dropdown-header">{% translate "Workout templates" %}</li>
-                            <li>
-                                <a class="dropdown-item"
-                                   href="{% url 'manager:template:overview' %}" rel="nofollow">
-                                    {% if not user.is_authenticated %}
-                                        <span class="{% fa_class 'lock' %}"></span>
-                                    {% endif %}
-                                    {% translate "Your templates" %}
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="{% url 'manager:template:public' %}"
-                                   rel="nofollow">
-                                    {% if not user.is_authenticated %}
-                                        <span class="{% fa_class 'lock' %}"></span>
-                                    {% endif %}
-                                    {% translate "Public templates" %}
                                 </a>
                             </li>
 
@@ -144,6 +99,10 @@
                             {% endif %}
                         </ul>
                     </li>
+
+
+                    {# Teams and calendar #}
+                    {% include 'teams/nav_modules.html' %}
 
 
                     {#               #}

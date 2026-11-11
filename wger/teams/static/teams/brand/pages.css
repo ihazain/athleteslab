@@ -1,0 +1,328 @@
+/* Pages of Athlete Lab Pro: calendar, training and teams dashboard. */
+
+/* View switch */
+.alp-tabs .nav-link {
+    color: #212529;
+    border-radius: 0.5rem;
+    font-weight: 500;
+}
+
+.alp-tabs .nav-link:hover {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+.alp-tabs .nav-link.active {
+    color: #fff;
+    background-color: #0b0b0d;
+}
+
+/* Day states, shared by the week and the year view */
+.alp-dot {
+    display: inline-block;
+    width: 0.9rem;
+    height: 0.9rem;
+    margin-right: 0.25rem;
+    vertical-align: -0.1rem;
+    border-radius: 0.25rem;
+}
+
+.alp-dot.alp-state-trained,
+.alp-month-table td.alp-state-trained {
+    background-color: #0b0b0d;
+}
+
+.alp-dot.alp-state-planned,
+.alp-month-table td.alp-state-planned {
+    box-shadow: inset 0 0 0 2px #0b0b0d;
+}
+
+.alp-dot.alp-state-missed,
+.alp-month-table td.alp-state-missed {
+    background-image: repeating-linear-gradient(
+        135deg,
+        #c9c9cf 0,
+        #c9c9cf 2px,
+        #f1f1f4 2px,
+        #f1f1f4 5px
+    );
+}
+
+/* Week */
+.alp-week {
+    display: grid;
+    gap: 0.6rem;
+}
+
+.alp-week-day {
+    display: grid;
+    grid-template-columns: 11rem 1fr auto;
+    gap: 0.75rem 1rem;
+    align-items: center;
+    padding: 0.85rem 1rem;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-left: 4px solid transparent;
+    border-radius: 0.75rem;
+}
+
+.alp-week-day.alp-state-trained {
+    border-left-color: #0b0b0d;
+}
+
+.alp-week-day.alp-state-planned {
+    border-left-color: #8a8a93;
+}
+
+.alp-week-day.alp-state-missed {
+    border-left-color: #c9c9cf;
+    background: #fafafb;
+}
+
+.alp-week-day.alp-today {
+    border-color: #0b0b0d;
+    box-shadow: 0 0 0 1px #0b0b0d;
+}
+
+.alp-week-date,
+.alp-week-training {
+    display: flex;
+    flex-direction: column;
+}
+
+.alp-week-date .badge {
+    align-self: flex-start;
+    margin-top: 0.2rem;
+}
+
+.alp-week-content {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+}
+
+.alp-week-training {
+    color: inherit;
+    text-decoration: none;
+}
+
+.alp-week-training:hover .fw-bold,
+.alp-week-training:focus .fw-bold {
+    text-decoration: underline;
+}
+
+@media (max-width: 575.98px) {
+    .alp-week-day {
+        grid-template-columns: 1fr auto;
+    }
+
+    .alp-week-content {
+        grid-column: 1 / -1;
+        grid-row: 2;
+    }
+}
+
+/* Timeline */
+.alp-timeline-scroll {
+    overflow-x: auto;
+}
+
+.alp-timeline {
+    min-width: 46rem;
+}
+
+.alp-timeline-weeks {
+    display: grid;
+    grid-template-columns: repeat(calc(var(--alp-days) / 7), 1fr);
+    color: #6c757d;
+    font-size: 0.75rem;
+}
+
+.alp-timeline-weeks span {
+    padding: 0.2rem 0.3rem;
+    border-left: 1px solid rgba(0, 0, 0, 0.12);
+    white-space: nowrap;
+}
+
+.alp-timeline-rows {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(var(--alp-days), 1fr);
+    row-gap: 0.5rem;
+    min-height: 6rem;
+    margin: 0;
+    padding: 0.6rem 0;
+    background-image: linear-gradient(to right, rgba(0, 0, 0, 0.08) 1px, transparent 1px);
+    background-size: calc(100% / (var(--alp-days) / 7)) 100%;
+    border-top: 1px solid rgba(0, 0, 0, 0.12);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.alp-timeline-row {
+    display: contents;
+}
+
+.alp-timeline-bar {
+    display: flex;
+    flex-direction: column;
+    grid-row: auto;
+    min-width: 0;
+    padding: 0.4rem 0.7rem;
+    overflow: hidden;
+    color: #0b0b0d;
+    text-decoration: none;
+    white-space: nowrap;
+    background: #e9e9ee;
+    border-radius: 0.6rem;
+}
+
+.alp-timeline-bar.alp-current-program {
+    color: #fff;
+    background: #0b0b0d;
+}
+
+.alp-timeline-bar.alp-cut-start {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.alp-timeline-bar.alp-cut-end {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.alp-timeline-bar:hover,
+.alp-timeline-bar:focus {
+    outline: 2px solid #0b0b0d;
+    outline-offset: 1px;
+}
+
+.alp-timeline-today {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc((var(--alp-today) - 0.5) / var(--alp-days) * 100%);
+    width: 2px;
+    background: #d1242f;
+    pointer-events: none;
+}
+
+/* Year */
+.alp-year {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    gap: 1.5rem 2rem;
+}
+
+.alp-month h5 {
+    margin-bottom: 0.4rem;
+    font-size: 1rem;
+}
+
+.alp-month-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 3px;
+    table-layout: fixed;
+}
+
+.alp-month-table th {
+    color: #6c757d;
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-align: center;
+}
+
+.alp-month-table th abbr {
+    text-decoration: none;
+}
+
+.alp-month-table td {
+    height: 1.9rem;
+    padding: 0;
+    font-size: 0.78rem;
+    text-align: center;
+    border-radius: 0.35rem;
+}
+
+.alp-month-table td a {
+    display: block;
+    line-height: 1.9rem;
+    color: #495057;
+    text-decoration: none;
+    border-radius: 0.35rem;
+}
+
+.alp-month-table td.alp-state-trained a {
+    color: #fff;
+    font-weight: 600;
+}
+
+.alp-month-table td.alp-state-planned a,
+.alp-month-table td.alp-state-missed a {
+    color: #0b0b0d;
+}
+
+.alp-month-table td.alp-today a {
+    outline: 2px solid #d1242f;
+    outline-offset: 1px;
+}
+
+.alp-month-table td a:hover,
+.alp-month-table td a:focus {
+    outline: 2px solid #0b0b0d;
+    outline-offset: 1px;
+}
+
+/* Card lists (training, teams dashboard) */
+.alp-cards {
+    display: grid;
+    gap: 0.6rem;
+}
+
+.alp-card {
+    padding: 0.85rem 1rem;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 0.75rem;
+}
+
+.alp-card > a.fw-bold,
+.alp-card .fw-bold {
+    color: #0b0b0d;
+}
+
+/* Teams dashboard */
+.alp-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+}
+
+.alp-stat {
+    padding: 0.9rem 1rem;
+    background: #0b0b0d;
+    border-radius: 0.75rem;
+}
+
+.alp-stat dt {
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.alp-stat dd {
+    margin: 0;
+    color: #fff;
+    font-size: 1.9rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.alp-team-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+    gap: 0.75rem;
+}

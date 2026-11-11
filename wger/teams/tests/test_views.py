@@ -154,7 +154,7 @@ class AthleteOverviewTestCase(WgerTestCase):
         self.assertEqual(set(programs), {archived, deleted})
         self.assertIsNone(programs[deleted].routine)
         self.assertContains(response, 'Withdrawn by the coach')
-        self.assertContains(response, 'You deleted this routine')
+        self.assertContains(response, 'You deleted this program')
 
     def test_empty_overview(self):
         """
@@ -266,7 +266,7 @@ class BrandTestCase(WgerTestCase):
         self.assertContains(response, 'class="alp-sidebar-toggle"', count=1)
         self.assertContains(response, 'data-label-expand="Expand menu"')
         # One icon per section of the menu and one for the account
-        self.assertContains(response, 'alp-nav-icon', count=5)
+        self.assertContains(response, 'alp-nav-icon', count=7)
         self.assertContains(response, 'fa-circle-user fa-fw alp-nav-icon')
         self.assertNotContains(response, 'wger logo')
 

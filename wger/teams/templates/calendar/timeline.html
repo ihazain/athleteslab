@@ -1,0 +1,70 @@
+{% extends "base_wide.html" %}
+{% load i18n static %}
+
+{% block title %}{% translate "Calendar" %}{% endblock %}
+
+{% block header %}
+    <link rel="stylesheet" type="text/css" href="{% static 'teams/brand/pages.css' %}">
+{% endblock %}
+
+
+{% block content %}
+    {% include 'calendar/_tabs.html' %}
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h4 class="mb-0">
+            {{ start|date:"SHORT_DATE_FORMAT" }} &ndash; {{ end|date:"SHORT_DATE_FORMAT" }}
+        </h4>
+        <div class="btn-group">
+            <a class="btn btn-light btn-sm" href="?date={{ previous|date:'Y-m-d' }}">
+                &laquo; {% translate "Earlier" %}
+            </a>
+            <a class="btn btn-light btn-sm" href="{% url 'calendar:timeline' %}">{% translate "Today" %}</a>
+            <a class="btn btn-light btn-sm" href="?date={{ next|date:'Y-m-d' }}">
+                {% translate "Later" %} &raquo;
+            </a>
+        </div>
+    </div>
+
+    <div class="alp-timeline-scroll">
+        <div class="alp-timeline" style="--alp-days: {{ days }};">
+            <div class="alp-timeline-weeks" aria-hidden="true">
+                {% for monday in weeks %}
+                    <span>{{ monday|date:"j. N" }}</span>
+                {% endfor %}
+            </div>
+
+            <ul class="alp-timeline-rows list-unstyled">
+                {% if today_column %}
+                    <li class="alp-timeline-today" style="--alp-today: {{ today_column }};" aria-hidden="true"></li>
+                {% endif %}
+                {% for row in rows %}
+                    <li class="alp-timeline-row">
+                        <a class="alp-timeline-bar {% if row.is_current %}alp-current-program{% endif %} {% if row.starts_before %}alp-cut-start{% endif %} {% if row.ends_after %}alp-cut-end{% endif %}"
+                           style="grid-column: {{ row.column }} / span {{ row.span }}; grid-row: {{ forloop.counter }};"
+                           href="{{ row.program.get_absolute_url }}">
+                            <span class="fw-bold">{{ row.program.name }}</span>
+                            <span class="small">
+                                {{ row.program.start|date:"SHORT_DATE_FORMAT" }} &ndash;
+                                {{ row.program.end|date:"SHORT_DATE_FORMAT" }}
+                                &middot;
+                                {% blocktranslate count count=row.weeks trimmed %}
+                                    {{ count }} week
+                                {% plural %}
+                                    {{ count }} weeks
+                                {% endblocktranslate %}
+                                {% if row.assignment.team %}
+                                    &middot; {{ row.assignment.team.name }}
+                                {% endif %}
+                            </span>
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    {% if not rows %}
+        <p class="text-muted mt-3">{% translate "No programs in these weeks." %}</p>
+    {% endif %}
+{% endblock %}

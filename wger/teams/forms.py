@@ -87,7 +87,7 @@ class TemplateChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj: Routine) -> str:
         if obj.user_id == self.user.pk:
             return obj.name
-        return _('%(name)s (public template)') % {'name': obj.name}
+        return _('%(name)s (public plan)') % {'name': obj.name}
 
 
 class AssignProgramForm(forms.Form):
@@ -105,7 +105,7 @@ class AssignProgramForm(forms.Form):
         self.team = team
 
         self.fields['template'] = TemplateChoiceField(
-            label=_('Program'),
+            label=_('Plan'),
             user=user,
             queryset=Routine.objects.filter(is_template=True)
             .filter(Q(user=user) | Q(is_public=True))
