@@ -87,7 +87,11 @@
     <ul class="list-group">
         {% for membership in memberships %}
             <li class="list-group-item d-flex justify-content-between">
-                <span>{{ membership.team.name }}</span>
+                {% if membership.role == 'coach' %}
+                    <a href="{% url 'teams:team-detail' membership.team.pk %}">{{ membership.team.name }}</a>
+                {% else %}
+                    <span>{{ membership.team.name }}</span>
+                {% endif %}
                 <span class="text-muted">
                     {% if membership.role == 'coach' %}
                         {% translate "Coach" %}
@@ -102,4 +106,18 @@
             </li>
         {% endfor %}
     </ul>
+
+
+    <h4 class="mt-5">{% translate "New team" %}</h4>
+    <p class="text-muted small">
+        {% translate "Create a team to invite athletes and assign programs to them." %}
+    </p>
+    <form method="post" action="{% url 'teams:team-add' %}">
+        {% csrf_token %}
+        <div class="mb-2">
+            <label for="new-team-name" class="form-label">{% translate "Name" %}</label>
+            <input type="text" class="form-control" id="new-team-name" name="name" maxlength="100" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">{% translate "Create team" %}</button>
+    </form>
 {% endblock %}

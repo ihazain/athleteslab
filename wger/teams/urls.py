@@ -18,11 +18,29 @@
 from django.urls import path
 
 # wger
-from wger.teams.views import athlete
+from wger.teams.views import (
+    athlete,
+    coach,
+)
 
 
 urlpatterns = [
     path('', athlete.overview, name='overview'),
     path('invitation/<int:pk>/accept', athlete.invitation_accept, name='invitation-accept'),
     path('invitation/<int:pk>/decline', athlete.invitation_decline, name='invitation-decline'),
+    path('team/add', coach.team_add, name='team-add'),
+    path('team/<int:pk>', coach.team_detail, name='team-detail'),
+    path('team/<int:pk>/edit', coach.team_edit, name='team-edit'),
+    path('team/<int:pk>/delete', coach.team_delete, name='team-delete'),
+    path('team/<int:pk>/invite', coach.member_invite, name='member-invite'),
+    path(
+        'team/<int:pk>/member/<int:membership_pk>/role',
+        coach.member_role,
+        name='member-role',
+    ),
+    path(
+        'team/<int:pk>/member/<int:membership_pk>/remove',
+        coach.member_remove,
+        name='member-remove',
+    ),
 ]

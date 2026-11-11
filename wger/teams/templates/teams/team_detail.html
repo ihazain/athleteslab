@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{{ team.name }}{% endblock %}
+
+
+{% block content %}
+    <p><a href="{% url 'teams:overview' %}">&laquo; {% translate "Teams" %}</a></p>
+
+    <h4>{% translate "Members" %}</h4>
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">{% translate "User" %}</th>
+                    <th scope="col">{% translate "Role" %}</th>
+                    <th scope="col"><span class="visually-hidden">{% translate "Actions" %}</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for membership in memberships %}
+                    <tr>
+                        <td>
+                            {{ membership.user.username }}
+                            {% if membership.status == 'invited' %}
+                                <span class="badge text-bg-warning">{% translate "Invited" %}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if membership.role == 'coach' %}
+                                {% translate "Coach" %}
+                            {% else %}
+                                {% translate "Athlete" %}
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <form method="post" class="d-inline"
+                                  action="{% url 'teams:member-role' team.pk membership.pk %}">
+                                {% csrf_token %}
+                                {% if membership.role == 'coach' %}
+                                    <input type="hidden" name="role" value="athlete">
+                                    <button type="submit" class="btn btn-light btn-sm">
+                                        {% translate "Make athlete" %}
+                                    </button>
+                                {% else %}
+                                    <input type="hidden" name="role" value="coach">
+                                    <button type="submit" class="btn btn-light btn-sm">
+                                        {% translate "Make coach" %}
+                                    </button>
+                                {% endif %}
+                            </form>
+                            <form method="post" class="d-inline"
+                                  action="{% url 'teams:member-remove' team.pk membership.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-secondary btn-sm">
+                                    {% if membership.status == 'invited' %}
+                                        {% translate "Withdraw invitation" %}
+                                    {% else %}
+                                        {% translate "Remove" %}
+                                    {% endif %}
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+
+    <h4 class="mt-4">{% translate "Invite a member" %}</h4>
+    <form method="post" action="{% url 'teams:member-invite' team.pk %}" class="row g-2 align-items-end">
+        {% csrf_token %}
+        <div class="col-12 col-sm-6">
+            <label for="invite-identifier" class="form-label">
+                {% translate "Username or e-mail address" %}
+            </label>
+            <input type="text" class="form-control" id="invite-identifier" name="identifier" required>
+        </div>
+        <div class="col-8 col-sm-3">
+            <label for="invite-role" class="form-label">{% translate "Role" %}</label>
+            <select class="form-select" id="invite-role" name="role">
+                <option value="athlete" selected>{% translate "Athlete" %}</option>
+                <option value="coach">{% translate "Coach" %}</option>
+            </select>
+        </div>
+        <div class="col-4 col-sm-3">
+            <button type="submit" class="btn btn-primary w-100">{% translate "Invite" %}</button>
+        </div>
+    </form>
+    <p class="text-muted small mt-2">
+        {% translate "The user needs an account and has to accept the invitation on the teams page." %}
+    </p>
+
+
+    <h4 class="mt-5">{% translate "Team settings" %}</h4>
+    <form method="post" action="{% url 'teams:team-edit' team.pk %}" class="mb-4">
+        {% csrf_token %}
+        <div class="mb-2">
+            <label for="team-name" class="form-label">{% translate "Name" %}</label>
+            <input type="text" class="form-control" id="team-name" name="name"
+                   value="{{ team.name }}" maxlength="100" required>
+        </div>
+        <button type="submit" class="btn btn-light btn-sm">{% translate "Rename" %}</button>
+    </form>
+
+    {% translate "Delete this team? The athletes keep their routines and logs." as confirm_delete %}
+    <form method="post" action="{% url 'teams:team-delete' team.pk %}"
+          onsubmit="return confirm('{{ confirm_delete|escapejs }}');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-secondary btn-sm">
+            {% translate "Delete team" %}
+        </button>
+    </form>
+{% endblock %}

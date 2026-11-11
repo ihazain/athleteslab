@@ -19,10 +19,12 @@ import copy
 import logging
 
 # Django
+from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.db.models import Count, Max
 from django.utils import timezone
+from django.utils.translation import gettext as _
 
 # wger
 from wger.manager.models import (
@@ -43,6 +45,7 @@ from wger.manager.models import (
 from wger.teams.models import (
     AssignedRoutine,
     ProgramAssignment,
+    Team,
     TeamMembership,
 )
 
@@ -313,4 +316,114 @@ def decline_invitation(membership: TeamMembership, user) -> None:
     The invited user declines, the membership is removed.
     """
     _own_open_invitation(membership, user)
+    membership.delete()
+
+
+def is_team_coach(user, team: Team) -> bool:
+    """
+    True if the user is an active coach of the team.
+    """
+    return TeamMembership.objects.filter(
+        team=team,
+        user=user,
+        role=TeamMembership.Role.COACH,
+        status=TeamMembership.Status.ACTIVE,
+    ).exists()
+
+
+def is_last_active_coach(membership: TeamMembership) -> bool:
+    """
+    True if the team would have no active coach without this membership.
+    """
+    if (
+        membership.role != TeamMembership.Role.COACH
+        or membership.status != TeamMembership.Status.ACTIVE
+    ):
+        return False
+    return (
+        not TeamMembership.objects.filter(
+            team=membership.team,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
+        .exclude(pk=membership.pk)
+        .exists()
+    )
+
+
+def _require_coach(user, team: Team) -> None:
+    if not is_team_coach(user, team):
+        raise PermissionDenied('Only a coach of this team can do this.')
+
+
+def create_team(name: str, created_by) -> Team:
+    """
+    Create a team with its creator as the first active coach.
+    """
+    with transaction.atomic():
+        team = Team.objects.create(name=name, created_by=created_by)
+        TeamMembership.objects.create(
+            team=team,
+            user=created_by,
+            role=TeamMembership.Role.COACH,
+            status=TeamMembership.Status.ACTIVE,
+        )
+    return team
+
+
+def find_user(identifier: str) -> User | None:
+    """
+    The active user with this username or e-mail address, ignoring case.
+    """
+    identifier = identifier.strip()
+    if not identifier:
+        return None
+
+    users = User.objects.filter(is_active=True)
+    return (
+        users.filter(username__iexact=identifier).first()
+        or users.filter(email__iexact=identifier).order_by('pk').first()
+    )
+
+
+def invite_member(team: Team, invited_by, user, role: str) -> TeamMembership:
+    """
+    Invite a user into the team. The user has to accept before the membership counts.
+    """
+    _require_coach(invited_by, team)
+    if role not in TeamMembership.Role.values:
+        raise ValidationError(_('Please select a valid role.'))
+
+    membership, created = TeamMembership.objects.get_or_create(
+        team=team,
+        user=user,
+        defaults={'role': role, 'status': TeamMembership.Status.INVITED},
+    )
+    if not created:
+        raise ValidationError(_('This user is already a member of the team or invited to it.'))
+    return membership
+
+
+def change_member_role(membership: TeamMembership, changed_by, role: str) -> TeamMembership:
+    """
+    Change the role of a member. The last active coach stays coach.
+    """
+    _require_coach(changed_by, membership.team)
+    if role not in TeamMembership.Role.values:
+        raise ValidationError(_('Please select a valid role.'))
+    if role != TeamMembership.Role.COACH and is_last_active_coach(membership):
+        raise ValidationError(_('A team needs at least one coach.'))
+
+    membership.role = role
+    membership.save(update_fields=['role'])
+    return membership
+
+
+def remove_member(membership: TeamMembership, removed_by) -> None:
+    """
+    Remove a member or withdraw an invitation. The last active coach stays.
+    """
+    _require_coach(removed_by, membership.team)
+    if is_last_active_coach(membership):
+        raise ValidationError(_('The last coach of a team cannot be removed.'))
     membership.delete()

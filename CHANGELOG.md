@@ -17,6 +17,9 @@ support follows later.
 * Athletes get a "Teams" page (Training menu, `/teams/`) with their open
   invitations (accept or decline), the programs assigned to them with a link
   to the routine, and their teams.
+* Coaches create teams on the "Teams" page and manage them on the team page:
+  invite members by username or e-mail address, change roles, remove members
+  or withdraw invitations, rename and delete the team.
 * A new membership is an invitation (`status: invited`). Only the invited user
   can answer it with `team-membership/{id}/accept/` or `.../decline/`. Invited
   members receive no copies and have no coach rights until they accept.

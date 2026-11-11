@@ -22,7 +22,7 @@ from django.core.exceptions import (
     PermissionDenied as DjangoPermissionDenied,
     ValidationError as DjangoValidationError,
 )
-from django.db import models, transaction
+from django.db import models
 
 # Third Party
 from drf_spectacular.utils import extend_schema
@@ -58,7 +58,9 @@ from wger.teams.services import (
     accept_invitation,
     archive_assignment,
     assignment_progress,
+    create_team,
     decline_invitation,
+    is_last_active_coach,
 )
 
 
@@ -87,14 +89,7 @@ class TeamViewSet(viewsets.ModelViewSet):
         ).distinct()
 
     def perform_create(self, serializer):
-        with transaction.atomic():
-            team = serializer.save(created_by=self.request.user)
-            TeamMembership.objects.create(
-                team=team,
-                user=self.request.user,
-                role=TeamMembership.Role.COACH,
-                status=TeamMembership.Status.ACTIVE,
-            )
+        serializer.instance = create_team(serializer.validated_data['name'], self.request.user)
 
 
 class TeamMembershipViewSet(viewsets.ModelViewSet):
@@ -139,31 +134,14 @@ class TeamMembershipViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         instance = serializer.instance
         new_role = serializer.validated_data.get('role', instance.role)
-        if self._is_last_active_coach(instance) and new_role != TeamMembership.Role.COACH:
+        if is_last_active_coach(instance) and new_role != TeamMembership.Role.COACH:
             raise exceptions.ValidationError('A team needs at least one coach.')
         serializer.save()
 
     def perform_destroy(self, instance):
-        if self._is_last_active_coach(instance):
+        if is_last_active_coach(instance):
             raise exceptions.ValidationError('The last coach of a team cannot be removed.')
         super().perform_destroy(instance)
-
-    @staticmethod
-    def _is_last_active_coach(membership: TeamMembership) -> bool:
-        if (
-            membership.role != TeamMembership.Role.COACH
-            or membership.status != TeamMembership.Status.ACTIVE
-        ):
-            return False
-        return (
-            not TeamMembership.objects.filter(
-                team=membership.team,
-                role=TeamMembership.Role.COACH,
-                status=TeamMembership.Status.ACTIVE,
-            )
-            .exclude(pk=membership.pk)
-            .exists()
-        )
 
     def _answer_invitation(self, answer):
         """
