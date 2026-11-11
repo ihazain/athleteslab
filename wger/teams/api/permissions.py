@@ -23,28 +23,7 @@ from wger.teams.models import (
     TeamGroup,
     TeamMembership,
 )
-
-
-def is_assignment_coach(user, assignment) -> bool:
-    """
-    True for an active coach of the assignment's team, or of a team of its athlete.
-    """
-    if assignment.team is not None:
-        return TeamMembership.objects.filter(
-            team=assignment.team,
-            user=user,
-            role=TeamMembership.Role.COACH,
-            status=TeamMembership.Status.ACTIVE,
-        ).exists()
-
-    return TeamMembership.objects.filter(
-        user=user,
-        role=TeamMembership.Role.COACH,
-        status=TeamMembership.Status.ACTIVE,
-        team__memberships__user=assignment.athlete,
-        team__memberships__role=TeamMembership.Role.ATHLETE,
-        team__memberships__status=TeamMembership.Status.ACTIVE,
-    ).exists()
+from wger.teams.services import is_assignment_coach
 
 
 class IsTeamCoach(permissions.BasePermission):

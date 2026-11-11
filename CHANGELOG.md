@@ -20,6 +20,11 @@ support follows later.
 * Coaches create teams on the "Teams" page and manage them on the team page:
   invite members by username or e-mail address, change roles, remove members
   or withdraw invitations, rename and delete the team.
+* On the team page coaches also manage groups and assign programs: pick one
+  of their templates or a public one, the whole team, a group or a single
+  athlete (with the number of athletes who receive a copy) and the period.
+  The assignment page shows who received the program, sessions and last
+  activity per athlete, and lets the coach withdraw the assignment.
 * A new membership is an invitation (`status: invited`). Only the invited user
   can answer it with `team-membership/{id}/accept/` or `.../decline/`. Invited
   members receive no copies and have no coach rights until they accept.

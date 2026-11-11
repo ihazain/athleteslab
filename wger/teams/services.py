@@ -46,6 +46,7 @@ from wger.teams.models import (
     AssignedRoutine,
     ProgramAssignment,
     Team,
+    TeamGroup,
     TeamMembership,
 )
 
@@ -427,3 +428,73 @@ def remove_member(membership: TeamMembership, removed_by) -> None:
     if is_last_active_coach(membership):
         raise ValidationError(_('The last coach of a team cannot be removed.'))
     membership.delete()
+
+
+def is_assignment_coach(user, assignment: ProgramAssignment) -> bool:
+    """
+    True for an active coach of the assignment's team, or of a team of its athlete.
+    """
+    if assignment.team is not None:
+        return is_team_coach(user, assignment.team)
+
+    return TeamMembership.objects.filter(
+        user=user,
+        role=TeamMembership.Role.COACH,
+        status=TeamMembership.Status.ACTIVE,
+        team__memberships__user=assignment.athlete,
+        team__memberships__role=TeamMembership.Role.ATHLETE,
+        team__memberships__status=TeamMembership.Status.ACTIVE,
+    ).exists()
+
+
+def active_athletes(memberships):
+    """
+    The memberships that receive a copy when a program is assigned.
+    """
+    return memberships.filter(
+        role=TeamMembership.Role.ATHLETE,
+        status=TeamMembership.Status.ACTIVE,
+    )
+
+
+def _check_group(team: Team, user, name: str, memberships, group: TeamGroup | None) -> None:
+    _require_coach(user, team)
+    if any(membership.team_id != team.pk for membership in memberships):
+        raise ValidationError(_('All members must belong to the team of the group.'))
+
+    same_name = TeamGroup.objects.filter(team=team, name=name)
+    if group is not None:
+        same_name = same_name.exclude(pk=group.pk)
+    if same_name.exists():
+        raise ValidationError(_('The team already has a group with this name.'))
+
+
+def create_group(team: Team, user, name: str, memberships) -> TeamGroup:
+    """
+    Create a group of the team with the given memberships.
+    """
+    _check_group(team, user, name, memberships, None)
+    with transaction.atomic():
+        group = TeamGroup.objects.create(team=team, name=name)
+        group.members.set(memberships)
+    return group
+
+
+def update_group(group: TeamGroup, user, name: str, memberships) -> TeamGroup:
+    """
+    Rename a group and replace its members.
+    """
+    _check_group(group.team, user, name, memberships, group)
+    with transaction.atomic():
+        group.name = name
+        group.save(update_fields=['name'])
+        group.members.set(memberships)
+    return group
+
+
+def delete_group(group: TeamGroup, user) -> None:
+    """
+    Delete a group. Its assignments and their copies stay.
+    """
+    _require_coach(user, group.team)
+    group.delete()

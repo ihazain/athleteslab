@@ -17,29 +17,55 @@
 # Django
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError
+from django.core.exceptions import (
+    PermissionDenied,
+    ValidationError,
+)
+from django.db.models import (
+    Count,
+    Q,
+)
+from django.http import Http404
 from django.shortcuts import (
     get_object_or_404,
     redirect,
     render,
 )
-from django.utils.translation import gettext as _
+from django.utils.translation import (
+    gettext as _,
+    ngettext,
+)
 from django.views.decorators.http import (
     require_GET,
+    require_http_methods,
     require_POST,
 )
 
 # wger
+from wger.teams.forms import (
+    AssignProgramForm,
+    GroupForm,
+)
 from wger.teams.models import (
+    ProgramAssignment,
     Team,
+    TeamGroup,
     TeamMembership,
 )
 from wger.teams.services import (
+    active_athletes,
+    archive_assignment,
+    assign_program,
+    assignment_progress,
     change_member_role,
+    create_group,
     create_team,
+    delete_group,
     find_user,
     invite_member,
+    is_assignment_coach,
     remove_member,
+    update_group,
 )
 
 
@@ -106,10 +132,29 @@ def team_detail(request, pk: int):
     memberships = team.memberships.select_related('user').order_by(
         'status', '-role', 'user__username'
     )
+    groups = [
+        {
+            'group': group,
+            'members': [m.user.username for m in group.members.all()],
+            'form': GroupForm(team=team, group=group),
+        }
+        for group in team.groups.prefetch_related('members__user')
+    ]
+
+    # Assignments of the team and its groups, and the ones made to its athletes
+    athletes = active_athletes(team.memberships).values('user')
+    assignments = (
+        ProgramAssignment.objects.filter(Q(team=team) | Q(team__isnull=True, athlete__in=athletes))
+        .select_related('template', 'group', 'athlete')
+        .annotate(received=Count('assigned_routines'))
+        .order_by('-start_date', '-pk')
+    )
     context = {
         'team': team,
         'memberships': memberships,
-        'roles': TeamMembership.Role,
+        'groups': groups,
+        'group_form': GroupForm(team=team),
+        'assignments': assignments,
     }
     return render(request, 'teams/team_detail.html', context)
 
@@ -179,3 +224,136 @@ def member_remove(request, pk: int, membership_pk: int):
         _('%(user)s was removed from the team.') % {'user': username},
     )
     return redirect('teams:team-detail', pk=team.pk)
+
+
+def _form_errors(request, form) -> None:
+    for field, errors in form.errors.items():
+        label = form.fields[field].label if field in form.fields else ''
+        for error in errors:
+            messages.error(request, f'{label}: {error}' if label else error)
+
+
+@login_required
+@require_POST
+def group_add(request, pk: int):
+    team = _coach_team(request, pk)
+    form = GroupForm(request.POST, team=team)
+    if form.is_valid():
+        _run(
+            request,
+            lambda: create_group(
+                team, request.user, form.cleaned_data['name'], form.cleaned_data['members']
+            ),
+            _('The group was created.'),
+        )
+    else:
+        _form_errors(request, form)
+    return redirect('teams:team-detail', pk=team.pk)
+
+
+@login_required
+@require_POST
+def group_edit(request, pk: int, group_pk: int):
+    team = _coach_team(request, pk)
+    group = get_object_or_404(TeamGroup, pk=group_pk, team=team)
+    form = GroupForm(request.POST, team=team, group=group)
+    if form.is_valid():
+        _run(
+            request,
+            lambda: update_group(
+                group, request.user, form.cleaned_data['name'], form.cleaned_data['members']
+            ),
+            _('The group was saved.'),
+        )
+    else:
+        _form_errors(request, form)
+    return redirect('teams:team-detail', pk=team.pk)
+
+
+@login_required
+@require_POST
+def group_delete(request, pk: int, group_pk: int):
+    team = _coach_team(request, pk)
+    group = get_object_or_404(TeamGroup, pk=group_pk, team=team)
+    _run(request, lambda: delete_group(group, request.user), _('The group was deleted.'))
+    return redirect('teams:team-detail', pk=team.pk)
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def assign(request, pk: int):
+    """
+    Assign a program to the team, one of its groups or one of its athletes.
+    """
+    team = _coach_team(request, pk)
+    form = AssignProgramForm(request.POST or None, team=team, user=request.user)
+    if request.method == 'POST' and form.is_valid():
+        try:
+            assignment = assign_program(
+                template=form.cleaned_data['template'],
+                assigned_by=request.user,
+                start_date=form.cleaned_data['start_date'],
+                end_date=form.cleaned_data['end_date'],
+                **form.target_kwargs(),
+            )
+        except ValidationError as exc:
+            form.add_error(None, exc.messages)
+        except PermissionDenied:
+            form.add_error(None, _('You are not allowed to make this assignment.'))
+        else:
+            received = assignment.assigned_routines.count()
+            messages.success(
+                request,
+                ngettext(
+                    'The program was assigned, %(count)d athlete received a copy.',
+                    'The program was assigned, %(count)d athletes received a copy.',
+                    received,
+                )
+                % {'count': received},
+            )
+            return redirect('teams:assignment-detail', pk=assignment.pk)
+
+    return render(request, 'teams/assign.html', {'team': team, 'form': form})
+
+
+def _coach_assignment(request, pk: int) -> ProgramAssignment:
+    """
+    The assignment if the user is a coach for it, 404 otherwise.
+    """
+    assignment = get_object_or_404(
+        ProgramAssignment.objects.select_related(
+            'team', 'group', 'athlete', 'template', 'assigned_by'
+        ),
+        pk=pk,
+    )
+    if not is_assignment_coach(request.user, assignment):
+        raise Http404
+    return assignment
+
+
+@login_required
+@require_GET
+def assignment_detail(request, pk: int):
+    """
+    Who received the assignment and who trained with it.
+    """
+    assignment = _coach_assignment(request, pk)
+    progress = assignment_progress(assignment)
+    context = {
+        'assignment': assignment,
+        'progress': progress,
+        'trained': sum(1 for row in progress if row['logs']),
+    }
+    return render(request, 'teams/assignment_detail.html', context)
+
+
+@login_required
+@require_POST
+def assignment_archive(request, pk: int):
+    assignment = _coach_assignment(request, pk)
+    _run(
+        request,
+        lambda: archive_assignment(assignment),
+        _('The assignment was withdrawn. The athletes keep their routines and logs.'),
+    )
+    return redirect('teams:assignment-detail', pk=assignment.pk)

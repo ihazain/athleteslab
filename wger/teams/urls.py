@@ -43,4 +43,10 @@ urlpatterns = [
         coach.member_remove,
         name='member-remove',
     ),
+    path('team/<int:pk>/group/add', coach.group_add, name='group-add'),
+    path('team/<int:pk>/group/<int:group_pk>/edit', coach.group_edit, name='group-edit'),
+    path('team/<int:pk>/group/<int:group_pk>/delete', coach.group_delete, name='group-delete'),
+    path('team/<int:pk>/assign', coach.assign, name='assign'),
+    path('assignment/<int:pk>', coach.assignment_detail, name='assignment-detail'),
+    path('assignment/<int:pk>/archive', coach.assignment_archive, name='assignment-archive'),
 ]

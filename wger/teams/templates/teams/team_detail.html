@@ -1,11 +1,57 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n crispy_forms_tags %}
 
 {% block title %}{{ team.name }}{% endblock %}
 
 
 {% block content %}
     <p><a href="{% url 'teams:overview' %}">&laquo; {% translate "Teams" %}</a></p>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <h4 class="mb-0">{% translate "Programs" %}</h4>
+        <a href="{% url 'teams:assign' team.pk %}" class="btn btn-primary btn-sm">
+            {% translate "Assign a program" %}
+        </a>
+    </div>
+    <ul class="list-group mt-2 mb-4">
+        {% for assignment in assignments %}
+            <li class="list-group-item">
+                <div class="d-flex flex-wrap justify-content-between gap-2">
+                    <a href="{% url 'teams:assignment-detail' assignment.pk %}" class="fw-bold">
+                        {{ assignment.template.name|default:_("Deleted template") }}
+                    </a>
+                    <span class="text-muted">
+                        {{ assignment.start_date|date:"SHORT_DATE_FORMAT" }}
+                        &ndash;
+                        {{ assignment.end_date|date:"SHORT_DATE_FORMAT" }}
+                    </span>
+                </div>
+                <div class="small text-muted">
+                    {% if assignment.athlete %}
+                        {{ assignment.athlete.username }}
+                    {% elif assignment.group %}
+                        {{ assignment.group.name }}
+                    {% else %}
+                        {% translate "Whole team" %}
+                    {% endif %}
+                    &middot;
+                    {% blocktranslate count count=assignment.received trimmed %}
+                        {{ count }} athlete
+                    {% plural %}
+                        {{ count }} athletes
+                    {% endblocktranslate %}
+                </div>
+                {% if assignment.archived_at %}
+                    <span class="badge text-bg-warning">{% translate "Withdrawn" %}</span>
+                {% endif %}
+            </li>
+        {% empty %}
+            <li class="list-group-item">
+                {% translate "No programs were assigned in this team yet." %}
+            </li>
+        {% endfor %}
+    </ul>
+
 
     <h4>{% translate "Members" %}</h4>
     <div class="table-responsive">
@@ -91,6 +137,48 @@
     <p class="text-muted small mt-2">
         {% translate "The user needs an account and has to accept the invitation on the teams page." %}
     </p>
+
+
+    <h4 class="mt-5">{% translate "Groups" %}</h4>
+    <p class="text-muted small">
+        {% translate "Groups are parts of the team, e.g. the goalkeepers. A program can be assigned to a group only." %}
+    </p>
+    <ul class="list-group mb-3">
+        {% for entry in groups %}
+            <li class="list-group-item">
+                <div class="fw-bold">{{ entry.group.name }}</div>
+                <div class="small text-muted">
+                    {{ entry.members|join:", "|default:_("No members") }}
+                </div>
+                <details class="mt-2">
+                    <summary>{% translate "Edit" %}</summary>
+                    <form method="post" class="mt-2"
+                          action="{% url 'teams:group-edit' team.pk entry.group.pk %}">
+                        {% csrf_token %}
+                        {{ entry.form|crispy }}
+                        <button type="submit" class="btn btn-light btn-sm">{% translate "Save" %}</button>
+                    </form>
+                    <form method="post" class="mt-2"
+                          action="{% url 'teams:group-delete' team.pk entry.group.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-secondary btn-sm">
+                            {% translate "Delete group" %}
+                        </button>
+                    </form>
+                </details>
+            </li>
+        {% empty %}
+            <li class="list-group-item">{% translate "This team has no groups yet." %}</li>
+        {% endfor %}
+    </ul>
+    <details>
+        <summary>{% translate "New group" %}</summary>
+        <form method="post" action="{% url 'teams:group-add' team.pk %}" class="mt-2">
+            {% csrf_token %}
+            {{ group_form|crispy }}
+            <button type="submit" class="btn btn-primary btn-sm">{% translate "Create group" %}</button>
+        </form>
+    </details>
 
 
     <h4 class="mt-5">{% translate "Team settings" %}</h4>

@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{{ assignment.template.name|default:_("Deleted template") }}{% endblock %}
+
+
+{% block content %}
+    <p>
+        {% if assignment.team %}
+            <a href="{% url 'teams:team-detail' assignment.team.pk %}">&laquo; {{ assignment.team.name }}</a>
+        {% else %}
+            <a href="{% url 'teams:overview' %}">&laquo; {% translate "Teams" %}</a>
+        {% endif %}
+    </p>
+
+    <dl class="row">
+        <dt class="col-sm-4">{% translate "Assigned to" %}</dt>
+        <dd class="col-sm-8">
+            {% if assignment.athlete %}
+                {{ assignment.athlete.username }}
+            {% elif assignment.group %}
+                {{ assignment.team.name }}, {{ assignment.group.name }}
+            {% else %}
+                {{ assignment.team.name }}
+            {% endif %}
+        </dd>
+        <dt class="col-sm-4">{% translate "Period" %}</dt>
+        <dd class="col-sm-8">
+            {{ assignment.start_date|date:"SHORT_DATE_FORMAT" }}
+            &ndash;
+            {{ assignment.end_date|date:"SHORT_DATE_FORMAT" }}
+        </dd>
+        <dt class="col-sm-4">{% translate "Assigned by" %}</dt>
+        <dd class="col-sm-8">
+            {{ assignment.assigned_by.username|default:"-/-" }},
+            {{ assignment.created|date:"SHORT_DATE_FORMAT" }}
+        </dd>
+        <dt class="col-sm-4">{% translate "Trained" %}</dt>
+        <dd class="col-sm-8">
+            {% blocktranslate with trained=trained count total=progress|length trimmed %}
+                {{ trained }} of {{ total }} athlete
+            {% plural %}
+                {{ trained }} of {{ total }} athletes
+            {% endblocktranslate %}
+        </dd>
+    </dl>
+
+    {% if assignment.archived_at %}
+        <div class="alert alert-warning">
+            {% blocktranslate with date=assignment.archived_at|date:"SHORT_DATE_FORMAT" trimmed %}
+                This assignment was withdrawn on {{ date }}. The athletes keep their routines and logs.
+            {% endblocktranslate %}
+        </div>
+    {% endif %}
+
+    <h4>{% translate "Athletes" %}</h4>
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">{% translate "Athlete" %}</th>
+                    <th scope="col">{% translate "Routine" %}</th>
+                    <th scope="col" class="text-end">{% translate "Sessions" %}</th>
+                    <th scope="col" class="text-end">{% translate "Last activity" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in progress %}
+                    <tr>
+                        <td>{{ row.username }}</td>
+                        <td>
+                            {% if row.routine %}
+                                {% translate "Received" %}
+                            {% else %}
+                                <span class="badge text-bg-secondary">{% translate "Deleted by the athlete" %}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">{{ row.sessions }}</td>
+                        <td class="text-end">
+                            {% if row.last_activity %}
+                                {{ row.last_activity|date:"SHORT_DATE_FORMAT" }}
+                            {% else %}
+                                <span class="text-muted">{% translate "Not started" %}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if not assignment.archived_at %}
+        {% translate "Withdraw this assignment? The athletes keep their routines and logs." as confirm_archive %}
+        <form method="post" action="{% url 'teams:assignment-archive' assignment.pk %}" class="mt-4"
+              onsubmit="return confirm('{{ confirm_archive|escapejs }}');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-secondary btn-sm">
+                {% translate "Withdraw assignment" %}
+            </button>
+        </form>
+    {% endif %}
+{% endblock %}

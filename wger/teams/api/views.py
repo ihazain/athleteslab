@@ -39,7 +39,6 @@ from rest_framework.response import Response
 from wger.teams.api.permissions import (
     IsAssignmentCoach,
     IsTeamCoach,
-    is_assignment_coach,
 )
 from wger.teams.api.serializers import (
     AssignmentProgressSerializer,
@@ -60,6 +59,7 @@ from wger.teams.services import (
     assignment_progress,
     create_team,
     decline_invitation,
+    is_assignment_coach,
     is_last_active_coach,
 )
 

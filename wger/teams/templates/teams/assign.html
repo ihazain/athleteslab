@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% load i18n crispy_forms_tags %}
+
+{% block title %}{% translate "Assign a program" %}{% endblock %}
+
+
+{% block content %}
+    <p><a href="{% url 'teams:team-detail' team.pk %}">&laquo; {{ team.name }}</a></p>
+
+    {% if form.fields.template.queryset.exists %}
+        <form method="post" action="{% url 'teams:assign' team.pk %}">
+            {% csrf_token %}
+            {{ form|crispy }}
+            <p class="text-muted small">
+                {% blocktranslate trimmed %}
+                    Every athlete gets an own copy of the program for this period. Later changes
+                    to the template do not change the copies. Invited members who have not
+                    accepted yet receive nothing.
+                {% endblocktranslate %}
+            </p>
+            <button type="submit" class="btn btn-primary">{% translate "Assign" %}</button>
+        </form>
+    {% else %}
+        <div class="alert alert-info">
+            {% translate "You have no templates yet. Create a routine and mark it as template first." %}
+            <a href="{% url 'manager:template:overview' %}" class="alert-link">
+                {% translate "Your templates" %}
+            </a>
+        </div>
+    {% endif %}
+{% endblock %}
