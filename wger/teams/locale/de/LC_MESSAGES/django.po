@@ -4,8 +4,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: athleteslab teams\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-11 11:10+0100\n"
-"PO-Revision-Date: 2026-11-11 11:10+0100\n"
+"POT-Creation-Date: 2026-11-11 11:40+0100\n"
+"PO-Revision-Date: 2026-11-11 11:40+0100\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
 "Language: de\n"
@@ -227,6 +227,12 @@ msgstr ""
 
 msgid "Create team"
 msgstr "Team erstellen"
+
+msgid "Collapse menu"
+msgstr "Menü einklappen"
+
+msgid "Expand menu"
+msgstr "Menü ausklappen"
 
 msgid "Programs"
 msgstr "Programme"

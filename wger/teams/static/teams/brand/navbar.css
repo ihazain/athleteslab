@@ -108,8 +108,13 @@
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.9%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
 }
 
-/* Collapsed menu on phones */
-@media (max-width: 767.98px) {
+/* Button that folds the sidebar, only there on desktop */
+.alp-sidebar-toggle {
+    display: none;
+}
+
+/* Collapsed menu on phones and tablets */
+@media (max-width: 991.98px) {
     .alp-navbar .navbar-collapse {
         margin-top: 0.6rem;
         padding-top: 0.4rem;
@@ -124,6 +129,267 @@
 
 @media (prefers-reduced-motion: reduce) {
     .alp-navbar .nav-link {
+        transition: none;
+    }
+}
+
+/*
+ * Desktop: the bar becomes a fixed sidebar on the left. The dropdowns of the
+ * main menu are shown open as sections, their toggles become section titles.
+ */
+@media (min-width: 992px) {
+    :root {
+        --alp-sidebar-width: 16.5rem;
+    }
+
+    body {
+        padding-left: var(--alp-sidebar-width);
+    }
+
+    /* The footer is positioned on the page, not in the padded body */
+    footer#main-footer {
+        left: var(--alp-sidebar-width);
+        width: calc(100% - var(--alp-sidebar-width));
+    }
+
+    .alp-navbar {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 1030;
+        width: var(--alp-sidebar-width);
+        padding: 1.4rem 0.9rem 0.9rem;
+        align-items: stretch;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+        border-bottom: 0;
+        border-right: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .alp-navbar .container-fluid {
+        padding: 0;
+    }
+
+    .alp-navbar .container-lg {
+        flex-direction: column;
+        flex-wrap: nowrap;
+        align-items: stretch;
+        max-width: none;
+        min-height: 100%;
+        padding: 0;
+    }
+
+    .alp-navbar .navbar-brand {
+        margin: 0 0 1.1rem 0.6rem;
+    }
+
+    .alp-navbar .navbar-collapse {
+        flex-direction: column;
+        flex-grow: 1;
+        align-items: stretch;
+    }
+
+    .alp-navbar .navbar-nav {
+        flex-direction: column;
+    }
+
+    .alp-navbar .navbar-nav.me-auto {
+        margin-right: 0 !important;
+        margin-bottom: 1rem !important;
+    }
+
+    /* Section titles */
+    .alp-navbar .navbar-nav.me-auto > .nav-item > .nav-link,
+    .alp-navbar .navbar-nav.me-auto > .nav-item > .nav-link.text-decoration-underline {
+        padding: 1rem 0.6rem 0.35rem;
+        color: rgba(255, 255, 255, 0.45) !important;
+        background: none;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        pointer-events: none;
+    }
+
+    .alp-navbar .navbar-nav.me-auto > .nav-item > .nav-link::after,
+    .alp-navbar .navbar-nav.me-auto > .nav-item > .nav-link .caret {
+        display: none;
+    }
+
+    /* Section content, always open */
+    .alp-navbar .navbar-nav.me-auto .dropdown-menu {
+        display: block;
+        position: static !important;
+        inset: auto !important;
+        transform: none !important;
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        border: 0;
+        box-shadow: none;
+    }
+
+    .alp-navbar .navbar-nav.me-auto .dropdown-item {
+        padding: 0.42rem 0.6rem;
+        color: rgba(255, 255, 255, 0.8);
+        white-space: normal;
+    }
+
+    .alp-navbar .navbar-nav.me-auto .dropdown-item:hover,
+    .alp-navbar .navbar-nav.me-auto .dropdown-item:focus {
+        color: #fff;
+        background-color: rgba(255, 255, 255, 0.09);
+    }
+
+    .alp-navbar .navbar-nav.me-auto .dropdown-item.alp-current {
+        color: #fff;
+        background-color: rgba(255, 255, 255, 0.15);
+        font-weight: 600;
+    }
+
+    .alp-navbar .navbar-nav.me-auto .dropdown-item:focus-visible {
+        outline: 2px solid #fff;
+        outline-offset: -2px;
+    }
+
+    .alp-navbar .navbar-nav.me-auto .dropdown-header {
+        padding: 0.7rem 0.6rem 0.2rem;
+        color: rgba(255, 255, 255, 0.38);
+        font-size: 0.66rem;
+    }
+
+    .alp-navbar .navbar-nav.me-auto .dropdown-divider {
+        display: none;
+    }
+
+    /* The last section ("About this software") stays a menu that opens on click */
+    .alp-navbar .navbar-nav.me-auto > .nav-item:last-child > .nav-link,
+    .alp-navbar .navbar-nav.me-auto > .nav-item:last-child > .nav-link.text-decoration-underline {
+        margin-top: 1rem;
+        padding: 0.42rem 0.6rem;
+        color: rgba(255, 255, 255, 0.6) !important;
+        font-size: 0.9rem;
+        font-weight: 500;
+        letter-spacing: 0;
+        text-transform: none;
+        pointer-events: auto;
+    }
+
+    .alp-navbar .navbar-nav.me-auto > .nav-item:last-child > .nav-link::after {
+        display: inline-block;
+    }
+
+    .alp-navbar .navbar-nav.me-auto > .nav-item:last-child > .dropdown-menu:not(.show) {
+        display: none;
+    }
+
+    .alp-navbar .navbar-nav.me-auto > .nav-item:last-child .dropdown-item {
+        padding-left: 1.2rem;
+        font-size: 0.88rem;
+    }
+
+    /* Account menu at the bottom, opening upwards */
+    .alp-navbar .navbar-collapse > .navbar-nav:last-child {
+        margin-top: auto !important;
+        margin-bottom: 0 !important;
+        padding-top: 0.6rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .alp-navbar .navbar-collapse > .navbar-nav:last-child .nav-link {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .alp-navbar .navbar-collapse > .navbar-nav:last-child .dropdown-menu {
+        position: absolute !important;
+        inset: auto 0 100% 0 !important;
+        transform: none !important;
+        margin: 0 0 0.4rem;
+    }
+}
+
+/* Desktop: the sidebar can be folded to a narrow rail with the logo */
+@media (min-width: 992px) {
+    body,
+    footer#main-footer,
+    .alp-navbar {
+        transition:
+            padding-left 0.2s ease,
+            left 0.2s ease,
+            width 0.2s ease;
+    }
+
+    .alp-sidebar-toggle {
+        position: absolute;
+        top: 1.25rem;
+        right: 0.7rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        padding: 0;
+        color: rgba(255, 255, 255, 0.6);
+        background: transparent;
+        border: 0;
+        border-radius: 0.5rem;
+    }
+
+    .alp-sidebar-toggle:hover {
+        color: #fff;
+        background-color: rgba(255, 255, 255, 0.09);
+    }
+
+    .alp-sidebar-toggle:focus-visible {
+        outline: 2px solid #fff;
+        outline-offset: 2px;
+    }
+
+    .alp-sidebar-toggle svg {
+        transition: transform 0.2s ease;
+    }
+
+    .alp-sidebar-collapsed {
+        --alp-sidebar-width: 4rem;
+    }
+
+    .alp-sidebar-collapsed .alp-navbar {
+        padding-left: 0;
+        padding-right: 0;
+        overflow: hidden;
+    }
+
+    .alp-sidebar-collapsed .alp-navbar .container-lg {
+        align-items: center;
+    }
+
+    .alp-sidebar-collapsed .alp-navbar .navbar-brand {
+        margin: 0 0 0.9rem;
+    }
+
+    .alp-sidebar-collapsed .alp-navbar .alp-wordmark,
+    .alp-sidebar-collapsed .alp-navbar .navbar-collapse {
+        display: none !important;
+    }
+
+    .alp-sidebar-collapsed .alp-sidebar-toggle {
+        position: static;
+    }
+
+    .alp-sidebar-collapsed .alp-sidebar-toggle svg {
+        transform: rotate(180deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body,
+    footer#main-footer,
+    .alp-navbar,
+    .alp-sidebar-toggle svg {
         transition: none;
     }
 }
